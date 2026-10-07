@@ -10,11 +10,11 @@
 
 **Spec:** `Спецификация.md` (корень проекта) — общая архитектура и 4 стадии пайплайна.
 
-## Прогресс (на 2026-09-30)
+## Прогресс (на 2026-10-07)
 
-- ✅ Сделано: Task 1, 2, 3, 4, 5, 9.
-- ⬜ Осталось: Task 6, 7, 8 (презентация), 10 (панель), 11 (оркестратор), 12 (выгрузка в панель).
-- Дополнительно, вне плана: ✅ скилл подбора 90 песен (`.claude/skills/podobrat-pesni/`); ✅ пробный список на тему «8 марта» (ждёт утверждения).
+- ✅ Сделано: Task 1, 2, 3, 4, 5, 6, 9.
+- ⬜ Осталось: Task 7, 8 (презентация), 10 (панель), 11 (оркестратор), 12 (выгрузка в панель).
+- Дополнительно, вне плана: ✅ скилл подбора 90 песен (`.claude/skills/podobrat-pesni/`); ✅ пробный список на тему «8 марта» (утверждён).
 
 ## Global Constraints
 
@@ -492,7 +492,7 @@ git commit -m "feat: автоматическая генерация бланк�
 
 ---
 
-## Task 6: Поиск слайда-слота по номеру бочонка ⬜ не сделано
+## Task 6: Поиск слайда-слота по номеру бочонка ✅ сделано
 
 **Files:**
 - Create: `scripts/template_slots.py`
@@ -502,7 +502,7 @@ git commit -m "feat: автоматическая генерация бланк�
 - Consumes: путь к файлу презентации-шаблона.
 - Produces: `find_slide_index_by_barrel_number(prs, number: int) -> int` — возвращает 0-based индекс слайда в `prs.slides` (python-pptx `Presentation` объект), у которого есть фигура с именем `"Текст 9"` и текстом, равным `str(number)`. Бросает `LookupError`, если не найдено.
 
-- [ ] **Step 1: Написать падающий тест**
+- [x] **Step 1: Написать падающий тест**
 
 Тест использует реальный `Рабочий 2 вар.pptx` как фикстуру для чтения (открывается только на чтение через python-pptx, без COM — быстро и безопасно).
 
@@ -538,12 +538,12 @@ def test_raises_for_unknown_barrel():
         find_slide_index_by_barrel_number(prs, 91)
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [x] **Step 2: Убедиться, что тест падает**
 
 Run: `pytest tests/test_template_slots.py -v`
 Expected: FAIL — `ModuleNotFoundError: No module named 'scripts.template_slots'`
 
-- [ ] **Step 3: Реализовать минимальный код**
+- [x] **Step 3: Реализовать минимальный код**
 
 ```python
 # scripts/template_slots.py
@@ -558,12 +558,12 @@ def find_slide_index_by_barrel_number(prs, number: int) -> int:
     raise LookupError(f"Слот для бочонка {number} не найден в шаблоне")
 ```
 
-- [ ] **Step 4: Убедиться, что тест проходит**
+- [x] **Step 4: Убедиться, что тест проходит**
 
 Run: `pytest tests/test_template_slots.py -v`
 Expected: PASS (3 passed)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/template_slots.py tests/test_template_slots.py
