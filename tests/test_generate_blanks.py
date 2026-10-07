@@ -1,10 +1,11 @@
 import pytest
 import openpyxl
 from scripts.generate_blanks import generate_blanks
+from scripts import paths
 from scripts.song_bank import load_song_bank
 
-TEMPLATE = "Шаблон бланков.xlsm"
-BANK = "Банк песен.xlsx"
+TEMPLATE = paths.BLANKS_TEMPLATE
+BANK = paths.SONG_BANK
 
 
 @pytest.mark.integration

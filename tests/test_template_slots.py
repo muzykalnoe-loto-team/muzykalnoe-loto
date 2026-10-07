@@ -1,8 +1,9 @@
 import pytest
 from pptx import Presentation
+from scripts import paths
 from scripts.template_slots import find_slide_index_by_barrel_number
 
-TEMPLATE = "Рабочий 2 вар.pptx"
+TEMPLATE = paths.PRESENTATION_TEMPLATE
 
 
 def test_finds_slot_for_barrel_1():

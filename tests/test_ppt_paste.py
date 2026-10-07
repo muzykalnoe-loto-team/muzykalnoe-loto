@@ -4,12 +4,13 @@ import shutil
 import pytest
 import win32com.client as win32
 
+from scripts import paths
 from scripts.ppt_paste import insert_song_slide
 
-TEMPLATE = "Рабочий 2 вар.pptx"
-ARCHIVE_SONG = "Банк всех слайдов23.01.2026/Натали - Шахерезада.pptx"
+TEMPLATE = paths.PRESENTATION_TEMPLATE
+ARCHIVE_SONG = f"{paths.SLIDES_ARCHIVE}/Натали - Шахерезада.pptx"
 # на слайде этой песни в поле номера осталась цифра "2" из прошлого мероприятия
-ARCHIVE_SONG_WITH_OLD_NUMBER = "Банк всех слайдов23.01.2026/Руки Вверх! - Девочки колхозницы.pptx"
+ARCHIVE_SONG_WITH_OLD_NUMBER = f"{paths.SLIDES_ARCHIVE}/Руки Вверх! - Девочки колхозницы.pptx"
 
 
 @pytest.fixture
@@ -71,14 +72,16 @@ def test_insert_song_slide_shows_only_barrel_number(template):
 
 
 @pytest.mark.integration
-def test_insert_song_slide_hides_template_placeholder_text(template):
+def test_insert_song_slide_keeps_navigation_on_every_third_slot(template):
+    # в «Рабочий 3 вар» каждый 3-й слот (бочонки 3, 6 … 90) переведён на макет караоке и получил кнопку
     ppt_app, prs = template
-    slide = prs.Slides(18)  # слот бочонка №3: без кнопки, с заглушкой "ТЕКСТ НА 2 СТРОЧКИ"
-    placeholder = next(s for s in slide.Shapes if s.Type == 6)
+    slide = prs.Slides(18)  # слот бочонка №3
+    button = next(s for s in slide.Shapes if s.ActionSettings(1).Action != 0)
 
     insert_song_slide(ppt_app, prs, ARCHIVE_SONG, 18)
 
+    top = _top_shape_at(slide, button.Left + button.Width / 2, button.Top + button.Height / 2)
+    assert top.Name == button.Name
     video = next(s for s in slide.Shapes if s.Type == 16)
-    assert placeholder.ZOrderPosition < video.ZOrderPosition  # заглушка под видео
     number = next(s for s in slide.Shapes if s.HasTextFrame and s.TextFrame.TextRange.Text == "3")
     assert number.ZOrderPosition > video.ZOrderPosition  # номер бочонка поверх видео

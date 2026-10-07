@@ -3,11 +3,12 @@ import json
 import pytest
 from pptx import Presentation
 
+from scripts import paths
 from scripts.build_presentation import assemble_presentation
 
-TEMPLATE = "Рабочий 2 вар.pptx"
-ARCHIVE = "Банк всех слайдов23.01.2026"
-SELECTION = "events/8 марта 2027-03-08/selected_songs.json"
+TEMPLATE = paths.PRESENTATION_TEMPLATE
+ARCHIVE = paths.SLIDES_ARCHIVE
+SELECTION = f"{paths.EVENTS}/пример/selected_songs.json"
 
 
 def _shape_names(prs, slide_number_1based):
