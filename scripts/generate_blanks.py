@@ -54,8 +54,9 @@ def generate_blanks(
     template_path = os.path.abspath(template_path)
     output_path = os.path.abspath(output_path)
 
-    # Dispatch (позднее связывание): EnsureDispatch падает на битом кэше gen_py
-    excel = win32.Dispatch("Excel.Application")
+    # DispatchEx (позднее связывание, отдельный процесс Excel): EnsureDispatch падает на битом
+    # кэше gen_py, а общий Excel спрятал бы и закрыл таблицы, открытые у оператора
+    excel = win32.DispatchEx("Excel.Application")
     excel.Visible = False
     excel.DisplayAlerts = False
 

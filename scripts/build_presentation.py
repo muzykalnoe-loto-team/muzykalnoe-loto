@@ -46,4 +46,7 @@ def assemble_presentation(
         finally:
             template_prs.Close()
     finally:
-        ppt_app.Quit()
+        # Оператор может держать открытыми свои презентации в том же PowerPoint —
+        # закрываем его, только если других файлов не открыто
+        if ppt_app.Presentations.Count == 0:
+            ppt_app.Quit()

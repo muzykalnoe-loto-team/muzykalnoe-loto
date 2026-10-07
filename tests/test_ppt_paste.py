@@ -22,7 +22,8 @@ def template(tmp_path):
         yield ppt_app, prs
     finally:
         prs.Close()
-        ppt_app.Quit()
+        if ppt_app.Presentations.Count == 0:  # не закрываем PowerPoint с чужими файлами
+            ppt_app.Quit()
 
 
 def _top_shape_at(slide, x, y):
