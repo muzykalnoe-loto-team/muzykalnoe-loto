@@ -134,6 +134,25 @@ button:disabled { opacity: .55; cursor: default; }
   background: transparent; color: var(--accent); font-size: 16px; line-height: 1;
 }
 .wanted button:hover { background: var(--surface); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+button.ghost, button.danger {
+  background: transparent; border: 1px solid var(--line);
+  padding: 8px 12px; font-size: 13.5px; font-weight: 500;
+}
+button.ghost { color: var(--fg); }
+button.ghost:hover:not(:disabled) { border-color: var(--muted); }
+button.danger { color: var(--accent); }
+button.danger:hover:not(:disabled) { border-color: var(--accent); }
+button.danger.solid { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.confirm {
+  margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--accent-soft);
+  display: grid; gap: 10px;
+}
+.confirm p { margin: 0; font-size: 14px; }
+.confirm .actions { margin-top: 0; }
+.event.editing { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.form-actions #submit { flex: 1 1 auto; }
 .songs { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); }
 .songs summary { cursor: pointer; color: var(--fg); font-weight: 500; }
 .songs ol { margin: 6px 0 0; padding-left: 20px; }
@@ -196,7 +215,10 @@ button:disabled { opacity: .55; cursor: default; }
           <span class="hint" id="song-hint">Наберите исполнителя или название и выберите одну или несколько песен — они обязательно войдут в 90.</span>
           <ul id="wanted" class="wanted" aria-label="Выбранные песни"></ul>
         </div>
-        <button id="submit" type="submit">Отправить бриф</button>
+        <div class="form-actions">
+          <button id="submit" type="submit">Отправить бриф</button>
+          <button id="cancel-edit" type="button" class="ghost" hidden>Отменить</button>
+        </div>
         <p id="msg" class="msg" role="status" aria-live="polite"></p>
       </form>
     </section>
@@ -233,7 +255,12 @@ const form = document.getElementById("brief");
 const msg = document.getElementById("msg");
 const submitBtn = document.getElementById("submit");
 const list = document.getElementById("list");
+const formTitle = document.getElementById("form-title");
+const cancelBtn = document.getElementById("cancel-edit");
 let db = null;
+let docs = [];              // последние мероприятия из базы
+let editingId = null;       // мероприятие, открытое в форме на изменение
+let confirmDeleteId = null; // мероприятие, у которого показан вопрос «Удалить?»
 
 function say(text, kind) {
   msg.textContent = text;
@@ -247,8 +274,10 @@ function el(tag, cls, text) {
   return n;
 }
 
-function renderEvent(data) {
-  const card = el("article", "event");
+function renderEvent(doc) {
+  const id = doc.id;
+  const data = doc.data();
+  const card = el("article", "event" + (id === editingId ? " editing" : ""));
   const date = el("div", "date");
   const [y, m, d] = String(data.date || "").split("-");
   date.append(el("b", null, d ? String(+d) : "—"), el("span", null, m ? MONTHS[+m - 1] + " " + y : ""));
@@ -278,9 +307,89 @@ function renderEvent(data) {
     box.append(ol);
     body.append(box);
   }
+
+  if (confirmDeleteId === id) {
+    const box = el("div", "confirm");
+    box.append(el("p", null, `Удалить мероприятие «${data.theme || "Без темы"}»? Вернуть его будет нельзя.`));
+    const row = el("div", "actions");
+    const yes = el("button", "danger solid", "Да, удалить");
+    yes.type = "button";
+    yes.addEventListener("click", () => removeEvent(id, data.theme, yes));
+    const no = el("button", "ghost", "Не удалять");
+    no.type = "button";
+    no.addEventListener("click", () => { confirmDeleteId = null; rerender(); });
+    row.append(yes, no);
+    box.append(row);
+    body.append(box);
+  } else {
+    const row = el("div", "actions");
+    const edit = el("button", "ghost", id === editingId ? "Открыто в форме" : "Изменить");
+    edit.type = "button";
+    edit.disabled = id === editingId;
+    edit.addEventListener("click", () => startEdit(id, data));
+    const del = el("button", "danger", "Удалить");
+    del.type = "button";
+    del.addEventListener("click", () => { confirmDeleteId = id; rerender(); });
+    row.append(edit, del);
+    body.append(row);
+  }
   card.append(date, body);
   return card;
 }
+
+function rerender() {
+  list.replaceChildren(...(docs.length ? docs.map(renderEvent) : [emptyState()]));
+}
+
+function resetForm() {
+  editingId = null;
+  form.reset();
+  form.elements.n_individual.value = 90;
+  form.elements.n_team.value = 35;
+  for (const input of form.querySelectorAll("input")) input.removeAttribute("aria-invalid");
+  wanted.length = 0;
+  renderWanted();
+  formTitle.textContent = "Новый бриф";
+  submitBtn.textContent = "Отправить бриф";
+  cancelBtn.hidden = true;
+}
+
+function startEdit(id, data) {
+  resetForm();
+  editingId = id;
+  confirmDeleteId = null;
+  const f = form.elements;
+  f.theme.value = data.theme || "";
+  f.date.value = data.date || "";
+  f.time.value = data.time || "";
+  f.place.value = data.place || "";
+  if (data.n_individual != null) f.n_individual.value = data.n_individual;
+  if (data.n_team != null) f.n_team.value = data.n_team;
+  wanted.push(...(Array.isArray(data.wanted_songs) ? data.wanted_songs : []));
+  renderWanted();
+  formTitle.textContent = `Изменить: ${data.theme || "мероприятие"}`;
+  submitBtn.textContent = "Сохранить изменения";
+  cancelBtn.hidden = false;
+  say("");
+  rerender();
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  f.theme.focus({ preventScroll: true });
+}
+
+async function removeEvent(id, theme, btn) {
+  btn.disabled = true;
+  try {
+    await db.doc("events/" + id).delete();
+    confirmDeleteId = null;
+    if (editingId === id) resetForm();
+    say(`Мероприятие «${theme || "Без темы"}» удалено.`, "ok");
+  } catch {
+    btn.disabled = false;
+    say("Не получилось удалить. Проверьте интернет и попробуйте ещё раз.", "err");
+  }
+}
+
+cancelBtn.addEventListener("click", () => { resetForm(); say(""); rerender(); });
 
 function renderPlaces(docs) {
   // Места прошлых игр — подсказки в поле «Место»; чаще встречавшиеся выше
@@ -297,12 +406,15 @@ function renderPlaces(docs) {
 }
 
 function renderList(snap) {
-  renderPlaces(snap.docs);
-  if (snap.empty) {
-    list.replaceChildren(list.firstElementChild?.classList.contains("empty") ? list.firstElementChild : emptyState());
-    return;
+  docs = snap.docs;
+  renderPlaces(docs);
+  // мероприятие, открытое в форме, удалили в другой вкладке — выходим из правки
+  if (editingId && !docs.some(d => d.id === editingId)) {
+    resetForm();
+    say("Мероприятие, которое вы меняли, удалено.", "err");
   }
-  list.replaceChildren(...snap.docs.map(d => renderEvent(d.data())));
+  if (confirmDeleteId && !docs.some(d => d.id === confirmDeleteId)) confirmDeleteId = null;
+  rerender();
 }
 
 function emptyState() {
@@ -338,10 +450,7 @@ function readForm() {
     place: f.place.value.trim(),
     n_individual: +f.n_individual.value,
     n_team: +f.n_team.value,
-    status: "draft",
     wanted_songs: [...wanted],
-    stages: { songs: "draft", blanks: "draft", presentation: "draft" },
-    created_at: new Date().toISOString(),
   };
 }
 
@@ -353,16 +462,25 @@ form.addEventListener("submit", async (e) => {
   submitBtn.disabled = true;
   say("Сохраняю…");
   try {
-    await db.collection("events").add(data);
-    form.reset();
-    form.elements.n_individual.value = 90;
-    form.elements.n_team.value = 35;
-    wanted.length = 0;
-    renderWanted();
-    say(`Бриф «${data.theme}» сохранён. Подбор песен начнётся в рабочей сессии.`, "ok");
+    if (editingId) {
+      // статусы стадий и дату создания не трогаем — меняются только поля брифа
+      await db.doc("events/" + editingId).update({ ...data, updated_at: new Date().toISOString() });
+      resetForm();
+      say(`Изменения в «${data.theme}» сохранены.`, "ok");
+    } else {
+      await db.collection("events").add({
+        ...data,
+        status: "draft",
+        stages: { songs: "draft", blanks: "draft", presentation: "draft" },
+        created_at: new Date().toISOString(),
+      });
+      resetForm();
+      say(`Бриф «${data.theme}» сохранён. Подбор песен начнётся в рабочей сессии.`, "ok");
+    }
+    rerender();
   } catch (err) {
     say(err && err.code === "invalid_argument"
-      ? "У вас нет права добавлять мероприятия в эту панель."
+      ? "У вас нет права менять мероприятия в этой панели."
       : "Не получилось сохранить. Проверьте интернет и отправьте ещё раз.", "err");
   } finally {
     submitBtn.disabled = false;
