@@ -105,6 +105,12 @@ button:disabled { opacity: .55; cursor: default; }
 .chip.review { background: var(--wait-soft); color: var(--wait); }
 .chip.approved, .chip.ready { background: var(--ok-soft); color: var(--ok); }
 .chip.progress { background: var(--accent-soft); color: var(--accent); }
+.stage { display: inline-flex; align-items: center; gap: 4px; }
+button.approve {
+  padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  background: var(--ok); color: var(--surface); border: 0;
+}
+button.approve:hover:not(:disabled) { filter: brightness(1.1); }
 
 .empty, .notice {
   border: 1px dashed var(--line); border-radius: 14px; padding: 22px; color: var(--muted);
@@ -303,7 +309,16 @@ function renderEvent(doc) {
   const st = data.stages || {};
   for (const [key, title] of STAGES) {
     const [cls, label] = STATE[st[key]] || STATE.draft;
-    stages.append(el("span", "chip " + cls, `${title}: ${label}`));
+    const stage = el("span", "stage");
+    stage.append(el("span", "chip " + cls, `${title}: ${label}`));
+    if (st[key] === "review") {
+      const ok = el("button", "approve", "Утвердить");
+      ok.type = "button";
+      ok.setAttribute("aria-label", `Утвердить: ${title}`);
+      ok.addEventListener("click", () => approveStage(doc.id, data, key, title, ok));
+      stage.append(ok);
+    }
+    stages.append(stage);
   }
   body.append(stages);
   if (typeof data.files_url === "string" && data.files_url.startsWith("https://")) {
@@ -390,6 +405,23 @@ function startEdit(id, data) {
   rerender();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
   f.theme.focus({ preventScroll: true });
+}
+
+async function approveStage(id, data, key, title, btn) {
+  btn.disabled = true;
+  const stagesNow = { ...(data.stages || {}), [key]: "approved" };
+  const allDone = STAGES.every(([k]) => stagesNow[k] === "approved");
+  try {
+    await db.doc("events/" + id).update({
+      stages: { [key]: "approved" },
+      ...(allDone ? { status: "ready" } : {}),
+      updated_at: new Date().toISOString(),
+    });
+    say(`«${title}» для «${data.theme || "мероприятия"}» утверждено.` + (allDone ? " Все стадии готовы." : ""), "ok");
+  } catch {
+    btn.disabled = false;
+    say("Не получилось утвердить. Проверьте интернет и попробуйте ещё раз.", "err");
+  }
 }
 
 async function removeEvent(id, theme, btn) {
