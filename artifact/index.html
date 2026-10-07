@@ -111,6 +111,33 @@ button:disabled { opacity: .55; cursor: default; }
 }
 .empty strong, .notice strong { color: var(--fg); display: block; margin-bottom: 4px; }
 
+.combo { position: relative; }
+.options {
+  position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px);
+  margin: 0; padding: 4px; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.14); max-height: 280px; overflow-y: auto;
+}
+.options li { padding: 8px 10px; border-radius: 7px; cursor: pointer; overflow-wrap: anywhere; }
+.options li[aria-selected="true"], .options li:hover { background: var(--accent-soft); }
+.options li.none { cursor: default; color: var(--muted); background: none; }
+.options mark { background: none; color: var(--accent); font-weight: 600; }
+.wanted { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.wanted li {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  background: var(--accent-soft); color: var(--fg); border-radius: 999px;
+  padding: 4px 4px 4px 12px; font-size: 13.5px;
+}
+.wanted li span { overflow-wrap: anywhere; }
+.wanted button {
+  flex: none; width: 24px; height: 24px; padding: 0; border-radius: 50%;
+  background: transparent; color: var(--accent); font-size: 16px; line-height: 1;
+}
+.wanted button:hover { background: var(--surface); }
+.songs { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); }
+.songs summary { cursor: pointer; color: var(--fg); font-weight: 500; }
+.songs ol { margin: 6px 0 0; padding-left: 20px; }
+
 @media (max-width: 420px) { .row { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: no-preference) { .event { animation: in .25s ease-out; } }
 @keyframes in { from { transform: translateY(4px); } to { transform: none; } }
@@ -145,7 +172,9 @@ button:disabled { opacity: .55; cursor: default; }
         </div>
         <div class="field">
           <label for="place">Место</label>
-          <input id="place" name="place" required maxlength="160" placeholder="Заведение и адрес">
+          <input id="place" name="place" list="places" required maxlength="160" autocomplete="off" placeholder="Выберите из списка или впишите новое">
+          <datalist id="places"></datalist>
+          <span class="hint" id="place-hint">Места прошлых игр появятся в списке сами.</span>
         </div>
         <div class="row">
           <div class="field">
@@ -156,6 +185,16 @@ button:disabled { opacity: .55; cursor: default; }
             <label for="n_team">Командных бланков</label>
             <input id="n_team" name="n_team" type="number" min="0" max="500" step="1" value="35" required>
           </div>
+        </div>
+        <div class="field">
+          <label for="song-search">Песни по желанию</label>
+          <div class="combo">
+            <input id="song-search" type="search" autocomplete="off" placeholder="Исполнитель или название"
+              role="combobox" aria-expanded="false" aria-controls="song-options" aria-autocomplete="list" data-optional>
+            <ul id="song-options" class="options" role="listbox" hidden></ul>
+          </div>
+          <span class="hint" id="song-hint">Поиск по банку песен. Выбранные песни обязательно войдут в 90.</span>
+          <ul id="wanted" class="wanted" aria-label="Выбранные песни"></ul>
         </div>
         <button id="submit" type="submit">Отправить бриф</button>
         <p id="msg" class="msg" role="status" aria-live="polite"></p>
@@ -229,11 +268,35 @@ function renderEvent(data) {
     stages.append(el("span", "chip " + cls, `${title}: ${label}`));
   }
   body.append(stages);
+  const songs = Array.isArray(data.wanted_songs) ? data.wanted_songs : [];
+  if (songs.length) {
+    const box = el("details", "songs");
+    box.append(el("summary", null, `Песни по желанию: ${songs.length}`));
+    const ol = el("ol");
+    for (const song of songs) ol.append(el("li", null, song));
+    box.append(ol);
+    body.append(box);
+  }
   card.append(date, body);
   return card;
 }
 
+function renderPlaces(docs) {
+  // Места прошлых игр — подсказки в поле «Место»; чаще встречавшиеся выше
+  const count = new Map();
+  for (const d of docs) {
+    const place = String(d.data().place || "").trim();
+    if (place) count.set(place, (count.get(place) || 0) + 1);
+  }
+  const places = [...count.keys()].sort((a, b) => count.get(b) - count.get(a) || a.localeCompare(b, "ru"));
+  document.getElementById("places").replaceChildren(...places.map(p => { const o = el("option"); o.value = p; return o; }));
+  document.getElementById("place-hint").textContent = places.length
+    ? `Знакомые места: ${places.length}. Нажмите на поле, чтобы выбрать, или впишите новое.`
+    : "Места прошлых игр появятся в списке сами.";
+}
+
 function renderList(snap) {
+  renderPlaces(snap.docs);
   if (snap.empty) {
     list.replaceChildren(list.firstElementChild?.classList.contains("empty") ? list.firstElementChild : emptyState());
     return;
@@ -257,7 +320,7 @@ function notice(title, text) {
 function readForm() {
   const f = form.elements;
   let firstBad = null;
-  for (const input of form.querySelectorAll("input")) {
+  for (const input of form.querySelectorAll("input:not([data-optional])")) {
     const v = input.value.trim();
     const bad = !v || (input.type === "number" && (!Number.isInteger(+v) || +v < 0 || +v > 500));
     input.setAttribute("aria-invalid", bad ? "true" : "false");
@@ -275,6 +338,7 @@ function readForm() {
     n_individual: +f.n_individual.value,
     n_team: +f.n_team.value,
     status: "draft",
+    wanted_songs: [...wanted],
     stages: { songs: "draft", blanks: "draft", presentation: "draft" },
     created_at: new Date().toISOString(),
   };
@@ -292,6 +356,8 @@ form.addEventListener("submit", async (e) => {
     form.reset();
     form.elements.n_individual.value = 90;
     form.elements.n_team.value = 35;
+    wanted.length = 0;
+    renderWanted();
     say(`Бриф «${data.theme}» сохранён. Подбор песен начнётся в рабочей сессии.`, "ok");
   } catch (err) {
     say(err && err.code === "invalid_argument"
@@ -300,6 +366,104 @@ form.addEventListener("submit", async (e) => {
   } finally {
     submitBtn.disabled = false;
   }
+});
+
+// ---- Песни по желанию: поиск по банку песен ----
+const search = document.getElementById("song-search");
+const options = document.getElementById("song-options");
+const wantedList = document.getElementById("wanted");
+const songHint = document.getElementById("song-hint");
+const wanted = [];
+let bank = [];
+let shown = [];
+let active = -1;
+
+const norm = (t) => t.toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
+
+fetch("songs.json")
+  .then(r => r.ok ? r.json() : Promise.reject())
+  .then(list => { bank = list.map(raw => ({ raw, key: norm(raw) })); })
+  .catch(() => {
+    search.disabled = true;
+    songHint.textContent = "Банк песен не загрузился — обновите страницу.";
+  });
+
+function renderWanted() {
+  wantedList.replaceChildren(...wanted.map((song, i) => {
+    const li = el("li");
+    const rm = el("button", null, "×");
+    rm.type = "button";
+    rm.setAttribute("aria-label", "Убрать " + song);
+    rm.addEventListener("click", () => { wanted.splice(i, 1); renderWanted(); search.focus(); });
+    li.append(el("span", null, song), rm);
+    return li;
+  }));
+}
+
+function closeOptions() {
+  options.hidden = true;
+  search.setAttribute("aria-expanded", "false");
+  search.removeAttribute("aria-activedescendant");
+  active = -1;
+}
+
+function highlight(text, q) {
+  const frag = document.createDocumentFragment();
+  const at = norm(text).indexOf(q);
+  if (at < 0 || !q) { frag.append(text); return frag; }
+  frag.append(text.slice(0, at), el("mark", null, text.slice(at, at + q.length)), text.slice(at + q.length));
+  return frag;
+}
+
+function showOptions() {
+  const q = norm(search.value);
+  if (q.length < 2) { closeOptions(); return; }
+  const words = q.split(" ");
+  shown = bank.filter(s => words.every(w => s.key.includes(w)) && !wanted.includes(s.raw)).slice(0, 8);
+  active = shown.length ? 0 : -1;
+  if (!shown.length) {
+    options.replaceChildren(el("li", "none", "В банке такой песни нет"));
+  } else {
+    options.replaceChildren(...shown.map((s, i) => {
+      const li = el("li");
+      li.id = "song-opt-" + i;
+      li.setAttribute("role", "option");
+      li.append(highlight(s.raw, words[0]));
+      li.addEventListener("mousedown", (e) => { e.preventDefault(); pick(i); });
+      return li;
+    }));
+  }
+  options.hidden = false;
+  search.setAttribute("aria-expanded", "true");
+  markActive();
+}
+
+function markActive() {
+  [...options.children].forEach((li, i) => li.setAttribute("aria-selected", i === active ? "true" : "false"));
+  if (active >= 0) {
+    search.setAttribute("aria-activedescendant", "song-opt-" + active);
+    options.children[active].scrollIntoView({ block: "nearest" });
+  }
+}
+
+function pick(i) {
+  const song = shown[i];
+  if (!song) return;
+  wanted.push(song.raw);
+  renderWanted();
+  search.value = "";
+  closeOptions();
+  search.focus();
+}
+
+search.addEventListener("input", showOptions);
+search.addEventListener("blur", closeOptions);
+search.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); if (!options.hidden) pick(active); return; }
+  if (options.hidden || !shown.length) return;
+  if (e.key === "ArrowDown") { e.preventDefault(); active = (active + 1) % shown.length; markActive(); }
+  if (e.key === "ArrowUp") { e.preventDefault(); active = (active - 1 + shown.length) % shown.length; markActive(); }
+  if (e.key === "Escape") closeOptions();
 });
 
 (async () => {

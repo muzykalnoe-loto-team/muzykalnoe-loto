@@ -12,3 +12,6 @@ events/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Список песен банка для панели мероприятий — выгружается из Банк песен.xlsx
+artifact/songs.json
