@@ -193,7 +193,7 @@ button:disabled { opacity: .55; cursor: default; }
               role="combobox" aria-expanded="false" aria-controls="song-options" aria-autocomplete="list" data-optional>
             <ul id="song-options" class="options" role="listbox" hidden></ul>
           </div>
-          <span class="hint" id="song-hint">Поиск по банку песен. Выбранные песни обязательно войдут в 90.</span>
+          <span class="hint" id="song-hint">Наберите исполнителя или название и выберите одну или несколько песен — они обязательно войдут в 90.</span>
           <ul id="wanted" class="wanted" aria-label="Выбранные песни"></ul>
         </div>
         <button id="submit" type="submit">Отправить бриф</button>
@@ -213,6 +213,7 @@ button:disabled { opacity: .55; cursor: default; }
   </div>
 </div>
 
+<script id="songs-data" type="application/json">[]</script>
 <script>
 const STAGES = [
   ["songs", "Список песен"],
@@ -380,15 +381,19 @@ let active = -1;
 
 const norm = (t) => t.toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
 
-fetch("songs.json")
-  .then(r => r.ok ? r.json() : Promise.reject())
-  .then(list => { bank = list.map(raw => ({ raw, key: norm(raw) })); })
-  .catch(() => {
-    search.disabled = true;
-    songHint.textContent = "Банк песен не загрузился — обновите страницу.";
-  });
+try {
+  // Песни встраиваются в страницу при сборке: artifact/build_panel.py
+  bank = JSON.parse(document.getElementById("songs-data").textContent).map(raw => ({ raw, key: norm(raw) }));
+} catch { bank = []; }
+if (!bank.length) {
+  search.disabled = true;
+  songHint.textContent = "Банк песен не загрузился — сообщите Claude.";
+}
 
 function renderWanted() {
+  songHint.textContent = wanted.length
+    ? `Выбрано песен: ${wanted.length}. Они обязательно войдут в 90.`
+    : "Наберите исполнителя или название и выберите одну или несколько песен — они обязательно войдут в 90.";
   wantedList.replaceChildren(...wanted.map((song, i) => {
     const li = el("li");
     const rm = el("button", null, "×");
@@ -419,10 +424,10 @@ function showOptions() {
   const q = norm(search.value);
   if (q.length < 2) { closeOptions(); return; }
   const words = q.split(" ");
-  shown = bank.filter(s => words.every(w => s.key.includes(w)) && !wanted.includes(s.raw)).slice(0, 8);
+  shown = bank.filter(s => words.every(w => s.key.includes(w)) && !wanted.includes(s.raw)).slice(0, 12);
   active = shown.length ? 0 : -1;
   if (!shown.length) {
-    options.replaceChildren(el("li", "none", "В банке такой песни нет"));
+    options.replaceChildren(el("li", "none", wanted.length ? "Больше совпадений нет" : "В банке такой песни нет"));
   } else {
     options.replaceChildren(...shown.map((s, i) => {
       const li = el("li");
@@ -451,12 +456,12 @@ function pick(i) {
   if (!song) return;
   wanted.push(song.raw);
   renderWanted();
-  search.value = "";
-  closeOptions();
-  search.focus();
+  showOptions();
+  if (shown.length) { active = Math.min(i, shown.length - 1); markActive(); }
 }
 
 search.addEventListener("input", showOptions);
+search.addEventListener("focus", showOptions);
 search.addEventListener("blur", closeOptions);
 search.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); if (!options.hidden) pick(active); return; }

@@ -89,6 +89,12 @@ pytest -m integration -v         # медленные тесты, реально
 `artifact/index.html` — веб-форма "Панель мероприятий" (Claude
 Artifact): приём брифа мероприятия и выдача готовых файлов на
 скачивание.
+Публикуется не сам `artifact/index.html`, а собранный
+`artifact/dist/index.html` со встроенным банком песен (для поиска «песен
+по желанию»): `python artifact/build_panel.py`, затем publish файла
+`artifact/dist/index.html` с `url`
+https://claude.ai/artifact/QNGUxwrX1AHnyPGuPrzMWN. `dist/` в git не
+хранится.
 
 Статус: спецификация и план согласованы, выполнение идёт по задачам
 плана (см. `отчёт.md` за историей изменений).
