@@ -12,8 +12,8 @@
 
 ## Прогресс (на 2026-10-07)
 
-- ✅ Сделано: Task 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.
-- ⬜ Осталось: Task 11 (оркестратор), 12 (выгрузка в панель).
+- ✅ Сделано: Task 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11.
+- ⬜ Осталось: Task 12 (выгрузка в панель).
 - Дополнительно, вне плана: ✅ скилл подбора 90 песен (`.claude/skills/podobrat-pesni/`); ✅ «Панель мероприятий»: песни по желанию, список мест, изменение и удаление мероприятий; ✅ шаблон «Рабочий 3 вар» (все 90 слотов на макете караоке с кнопкой).
 - 2026-10-07: исходные файлы перенесены в папку `Исходники/`, пути заданы в `scripts/paths.py`; рабочий шаблон презентации — `Рабочий 3 вар.pptx`. Пути в задачах ниже записаны на момент составления плана.
 
@@ -870,7 +870,7 @@ git commit -m "feat: артефакт «Панель мероприятий» �
 
 ---
 
-## Task 11: Оркестратор — один прогон от списка до готовых файлов ⬜ не сделано
+## Task 11: Оркестратор — один прогон от списка до готовых файлов ✅ сделано (ждёт ручной проверки оператором)
 
 **Files:**
 - Create: `scripts/run_pipeline.py`
@@ -880,7 +880,7 @@ git commit -m "feat: артефакт «Панель мероприятий» �
 - Consumes: путь к `selected_songs.json` (формат Task 4), пути к `Банк песен.xlsx` (не используется напрямую, но остаётся источником для сверки), `Шаблон бланков.xlsm`, `Рабочий 2 вар.pptx`, папке архива, `n_individual`, `n_team`, папке для вывода.
 - Produces: `run_pipeline(selected_songs_path: str, blanks_template: str, presentation_template: str, archive_folder: str, n_individual: int, n_team: int, output_dir: str) -> dict`. Возвращает `{"blanks_path": str, "presentation_path": str}`. Внутри переводит формат `barrels` (Task 4) в вид, ожидаемый `generate_blanks` (Task 5, список строк по порядку) и `assemble_presentation` (Task 8, список словарей) — это единственное место, где расхождение форматов между Task 5 и Task 8 разрешается.
 
-- [ ] **Step 1: Написать падающий тест**
+- [x] **Step 1: Написать падающий тест**
 
 ```python
 # tests/test_run_pipeline.py
@@ -926,12 +926,12 @@ def test_run_pipeline_produces_both_files(tmp_path):
     }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [x] **Step 2: Убедиться, что тест падает**
 
 Run: `pytest tests/test_run_pipeline.py -v -m integration`
 Expected: FAIL — `ModuleNotFoundError: No module named 'scripts.run_pipeline'`
 
-- [ ] **Step 3: Реализовать минимальный код**
+- [x] **Step 3: Реализовать минимальный код**
 
 ```python
 # scripts/run_pipeline.py
@@ -966,12 +966,14 @@ def run_pipeline(
     return {"blanks_path": blanks_path, "presentation_path": presentation_path}
 ```
 
-- [ ] **Step 4: Убедиться, что тест проходит**
+- [x] **Step 4: Убедиться, что тест проходит**
 
 Run: `pytest tests/test_run_pipeline.py -v -m integration`
 Expected: PASS (1 passed). Это самый долгий тест в наборе (реально открывает Excel и 90 файлов PowerPoint) — не запускать его в быстром цикле разработки, только перед сдачей.
 
-- [ ] **Step 5: Commit**
+> **Отличия от плана при выполнении:** `run_pipeline(selected_songs_path, n_individual, n_team, output_dir, ...)` — пути к шаблонам, архиву и банку по умолчанию берутся из `scripts/paths.py` (шаблон презентации — «Рабочий 3 вар»). Перед запуском Excel/PowerPoint список проверяется (`validate_selection` + номера 1–90), при ошибке — `ValueError`, ничего не создаётся. Файлы называются по-русски: `Бланки.xlsm`, `Презентация.pptx`. Тесты: интеграционный на списке `events/пример/` и быстрый на отказ при плохом списке. Боевой прогон — «Готический бал» 31.10.2026 (90 + 35 бланков): 62 с; проверено — во всех 4500 клетках бланков номер совпадает с песней своего бочонка, все 90 слайдов презентации в порядке.
+
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/run_pipeline.py tests/test_run_pipeline.py
