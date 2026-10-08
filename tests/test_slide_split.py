@@ -89,3 +89,28 @@ def test_real_old_slide_keeps_trim_in_powerpoint(tmp_path):
     finally:
         if app.Presentations.Count == 0:
             app.Quit()
+
+
+def test_links_from_layout_to_other_slides_do_not_pull_them_in(tmp_path):
+    # В старых играх кнопка в макете ведёт на слайд «Таблица», а с него — ссылки на все слайды игры
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+
+    prs = Presentation()
+    slides = []
+    for i, color in enumerate([(255, 0, 0), (0, 255, 0), (0, 0, 255)], 1):
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        s.shapes.add_textbox(Pt(10), Pt(10), Pt(200), Pt(30)).text_frame.text = f"Слайд {i}"
+        s.shapes.add_picture(_png(color), Pt(10), Pt(60), Pt(100), Pt(70))
+        slides.append(s)
+    prs.slide_layouts[6].part.relate_to(slides[0].part, RT.SLIDE)  # макет → «Таблица» (слайд 1)
+    slides[0].part.relate_to(slides[2].part, RT.SLIDE)  # «Таблица» → слайд 3
+    src = tmp_path / "игра.pptx"
+    prs.save(src)
+    out = tmp_path / "песня.pptx"
+
+    extract_slide(str(src), "ppt/slides/slide2.xml", str(out))
+
+    with zipfile.ZipFile(out) as z:
+        assert [n for n in z.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", n)] == ["ppt/slides/slide2.xml"]
+        assert len([n for n in z.namelist() if n.startswith("ppt/media/")]) == 1
+    assert len(Presentation(str(out)).slides) == 1

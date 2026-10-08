@@ -69,7 +69,19 @@ def extract_slide(src: str, slide_part: str, out_path: str) -> None:
             changed[slide_rels_name] = srels
 
         def read_text(name: str) -> str:
-            return changed[name] if name in changed else zin.read(name).decode("utf-8", "replace")
+            if name in changed:
+                return changed[name]
+            xml = zin.read(name).decode("utf-8", "replace")
+            # Ссылки на другие слайды из макета, шаблона, заметок (кнопка «Таблица» и т. п.) → на наш
+            # слайд: иначе по ним в файл попадает вся игра
+            owner_base = posixpath.dirname(posixpath.dirname(name))
+            own_rel = posixpath.relpath(slide_part, owner_base or ".")
+            for tag in _rel_tags(xml):
+                if _attr(tag, "Type") == SLIDE_REL and _resolve(owner_base, _attr(tag, "Target")) != slide_part:
+                    xml = xml.replace(tag, re.sub(r'\bTarget="[^"]*"', f'Target="{own_rel}"', tag))
+            if name != "_rels/.rels":
+                changed[name] = xml
+            return xml
 
         # 4. Обход связей от корня: оставляем только то, до чего можно дойти
         keep: set[str] = set()
