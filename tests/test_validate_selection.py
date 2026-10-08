@@ -39,3 +39,11 @@ def test_unknown_song_fails():
 
     assert result["ok"] is False
     assert any("Неизвестный - Трек" in e for e in result["errors"])
+
+
+def test_song_with_other_spelling_is_known():
+    # в общем банке разные написания одной песни слиты: «ё/е», регистр, знаки не мешают
+    bank = BANK + [{"raw": "Ёлка - Прованс"}]
+    selected = [f"Артист{i} - Песня{i}" for i in range(1, 90)] + ["Елка - прованс"]
+
+    assert validate_selection(selected, bank) == {"ok": True, "errors": []}

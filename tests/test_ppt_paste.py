@@ -71,17 +71,31 @@ def test_insert_song_slide_shows_only_barrel_number(template):
     assert numbers == ["41"]
 
 
+def _click_actions(shapes):
+    found = []
+    for s in shapes:
+        try:
+            if s.ActionSettings(1).Action != 0:
+                found.append(s)
+        except Exception:  # у группы нет настроек нажатия
+            pass
+    return found
+
+
 @pytest.mark.integration
 def test_insert_song_slide_keeps_navigation_on_every_third_slot(template):
-    # в «Рабочий 3 вар» каждый 3-й слот (бочонки 3, 6 … 90) переведён на макет караоке и получил кнопку
+    # каждый 3-й слот (бочонки 3, 6 … 90) — на макете «Игровой слайд», кнопка «Таблица» живёт в макете:
+    # видео на весь слайд закрыло бы её, поэтому кнопка должна оказаться поверх видео
     ppt_app, prs = template
     slide = prs.Slides(18)  # слот бочонка №3
-    button = next(s for s in slide.Shapes if s.ActionSettings(1).Action != 0)
+    assert not _click_actions(slide.Shapes)
+    button = _click_actions(slide.CustomLayout.Shapes)[0]
 
     insert_song_slide(ppt_app, prs, ARCHIVE_SONG, 18)
 
     top = _top_shape_at(slide, button.Left + button.Width / 2, button.Top + button.Height / 2)
-    assert top.Name == button.Name
+    assert top.ActionSettings(1).Action == button.ActionSettings(1).Action
+    assert top.ActionSettings(1).Hyperlink.SubAddress == button.ActionSettings(1).Hyperlink.SubAddress
     video = next(s for s in slide.Shapes if s.Type == 16)
     number = next(s for s in slide.Shapes if s.HasTextFrame and s.TextFrame.TextRange.Text == "3")
     assert number.ZOrderPosition > video.ZOrderPosition  # номер бочонка поверх видео

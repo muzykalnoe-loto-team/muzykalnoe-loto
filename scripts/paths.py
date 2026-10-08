@@ -3,7 +3,8 @@ SOURCES = "Исходники"
 
 SONG_BANK = f"{SOURCES}/Банк песен.xlsx"
 BLANKS_TEMPLATE = f"{SOURCES}/Шаблон бланков.xlsm"
-PRESENTATION_TEMPLATE = f"{SOURCES}/Рабочий 3 вар.pptx"
+# Шаблон игры: каждый 3-й слот (бочонки 3, 6 … 90) — макет «Игровой слайд» под старый слайд
+PRESENTATION_TEMPLATE = f"{SOURCES}/Рабочий 2 вар.pptx"
 SLIDES_ARCHIVE = f"{SOURCES}/Банк всех слайдов23.01.2026"
 
 EVENTS = "events"
@@ -17,5 +18,3 @@ OLD_BANK = f"{SOURCES}/Банк старых слайдов"
 OLD_CATALOG = f"{OLD_BANK}/каталог.json"
 COMMON_BANK_XLSX = f"{SOURCES}/Общий банк песен.xlsx"
 COMMON_BANK_JSON = f"{SOURCES}/Общий банк песен.json"
-# Шаблон игры со старыми слайдами: каждый 3-й слот — макет «Игровой слайд»
-MIXED_TEMPLATE = f"{SOURCES}/Рабочий 2 вар.pptx"

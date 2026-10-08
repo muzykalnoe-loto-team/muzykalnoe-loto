@@ -24,7 +24,7 @@ def _catalog_entry(with_photo=True):
 @pytest.fixture
 def template_copy(tmp_path):
     path = tmp_path / "шаблон.pptx"
-    shutil.copy(paths.MIXED_TEMPLATE, path)
+    shutil.copy(paths.PRESENTATION_TEMPLATE, path)
     return path
 
 

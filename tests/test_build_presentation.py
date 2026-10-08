@@ -44,3 +44,25 @@ def test_assemble_presentation_fails_fast_on_missing_archive_file(tmp_path):
         assemble_presentation(TEMPLATE, ARCHIVE, barrels, str(output))
 
     assert not output.exists()
+
+
+@pytest.mark.integration
+def test_assemble_mixed_game_puts_old_slide_on_third_barrel(tmp_path):
+    from pptx.enum.shapes import PP_PLACEHOLDER
+
+    from scripts.barrel_kinds import bank_index, resolve_files
+    from scripts.common_bank import load_common_bank
+    index = bank_index(load_common_bank())
+    video = next(e["raw"] for e in index.values() if e["video_file"])
+    old = next(e["raw"] for e in index.values() if e["old_file"] and e["old_photo_part"] and e["raw"] != video)
+    barrels = resolve_files([{"number": 1, "song": video, "kind": "video"},
+                             {"number": 3, "song": old, "kind": "old"}], index)
+    output = tmp_path / "presentation_output.pptx"
+
+    assemble_presentation(TEMPLATE, ARCHIVE, barrels, str(output))
+
+    slide = Presentation(str(output)).slides[17]  # бочонок 3
+    assert any("audioFile" in s._element.xml for s in slide.shapes)  # звук старого слайда (python-pptx видит его картинкой)
+    photo = next(p for p in slide.placeholders if p.placeholder_format.type == PP_PLACEHOLDER.PICTURE)
+    assert photo.__class__.__name__ == "PlaceholderPicture"
+    assert video in _shape_names(Presentation(str(output)), 16)

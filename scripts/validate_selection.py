@@ -1,3 +1,6 @@
+from scripts.song_names import norm
+
+
 def validate_selection(selected: list[str], bank: list[dict]) -> dict:
     errors = []
 
@@ -7,14 +10,15 @@ def validate_selection(selected: list[str], bank: list[dict]) -> dict:
     seen = set()
     duplicates = set()
     for song in selected:
-        if song in seen:
+        # песни сравниваем по norm: «ё/е», регистр и знаки — одна и та же песня
+        if norm(song) in seen:
             duplicates.add(song)
-        seen.add(song)
+        seen.add(norm(song))
     if duplicates:
         errors.append("Найдены дубликаты: " + ", ".join(sorted(duplicates)))
 
-    bank_raw = {item["raw"] for item in bank}
-    unknown = [song for song in selected if song not in bank_raw]
+    bank_keys = {norm(item["raw"]) for item in bank}
+    unknown = [song for song in selected if norm(song) not in bank_keys]
     if unknown:
         errors.append("Песни не найдены в базе: " + ", ".join(unknown))
 

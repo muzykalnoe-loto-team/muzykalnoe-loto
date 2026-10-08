@@ -9,11 +9,12 @@ class FakeShape:
 
 
 class FakePasted:
-    def __init__(self, first):
-        self.first, self.deleted = first, False
+    def __init__(self, shapes):
+        self.shapes = shapes if isinstance(shapes, list) else [shapes]
+        self.Count, self.deleted = len(self.shapes), False
 
     def __call__(self, i):
-        return self.first
+        return self.shapes[i - 1]
 
     def Delete(self):
         self.deleted = True
@@ -56,3 +57,12 @@ def test_gives_up_after_three_wrong_pastes():
         ppt_paste.copy_paste_checked(lambda: None, slide, "Нужная песня", 16)
 
     assert all(p.deleted for p in slide.Shapes.pasted)
+
+
+def test_expected_shape_need_not_be_first():
+    # «#2Маши - Босая»: на слайде песни первой стоит текстовая заготовка, видео — четвёртым
+    slide = FakeSlide([[FakeShape("Text Placeholder 9", 14), FakeShape("#2Маши - Босая", 16)]])
+
+    pasted = ppt_paste.copy_paste_checked(lambda: None, slide, "#2Маши - Босая", 16)
+
+    assert pasted is slide.Shapes.pasted[0] and not pasted.deleted
