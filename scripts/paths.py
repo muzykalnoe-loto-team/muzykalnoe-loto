@@ -10,3 +10,12 @@ EVENTS = "events"
 
 # Ключи и пароли (в git не хранится, значения не выводить на экран)
 SECRETS_FILE = ".env"
+
+# Старые игры и всё, что из них собирается (в git не хранится)
+OLD_DESIGN = f"{SOURCES}/Старый дизайн"
+OLD_BANK = f"{SOURCES}/Банк старых слайдов"
+OLD_CATALOG = f"{OLD_BANK}/каталог.json"
+COMMON_BANK_XLSX = f"{SOURCES}/Общий банк песен.xlsx"
+COMMON_BANK_JSON = f"{SOURCES}/Общий банк песен.json"
+# Шаблон игры со старыми слайдами: каждый 3-й слот — макет «Игровой слайд»
+MIXED_TEMPLATE = f"{SOURCES}/Рабочий 2 вар.pptx"
