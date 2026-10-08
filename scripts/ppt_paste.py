@@ -21,7 +21,7 @@ def insert_song_slide(ppt_app, template_prs, archive_file_path: str, slide_index
 
         target_slide = template_prs.Slides(slide_index_1based)
         own_shapes = list(target_slide.Shapes)
-        pasted = _copy_paste_checked(archive_shapes, target_slide, video.Name, video.Type)
+        pasted = copy_paste_checked(archive_shapes.Range().Copy, target_slide, video.Name, video.Type)
     finally:
         archive_prs.Close()
 
@@ -58,16 +58,14 @@ def _is_barrel_number(shape) -> bool:
     return shape.HasTextFrame and shape.TextFrame.TextRange.Text.strip().isdigit()
 
 
-def _copy_paste_checked(archive_shapes, target_slide, video_name: str, video_type: int):
+def copy_paste_checked(copy, target_slide, expected_name: str, expected_type: int):
     # Буфер обмена иногда не успевает обновиться, и вставляется предыдущая песня
-    # (картинкой вместо видео) — сверяем вставленное и повторяем
+    # (картинкой вместо видео или звука) — сверяем вставленное и повторяем
     for attempt in range(1, PASTE_ATTEMPTS + 1):
-        archive_shapes.Range().Copy()
+        copy()
         time.sleep(0.2 * attempt)
         pasted = target_slide.Shapes.Paste()
-        if pasted(1).Name == video_name and pasted(1).Type == video_type:
+        if pasted(1).Name == expected_name and pasted(1).Type == expected_type:
             return pasted
         pasted.Delete()
-    raise RuntimeError(
-        f"Не удалось вставить слайд песни «{video_name}» за {PASTE_ATTEMPTS} попытки"
-    )
+    raise RuntimeError(f"Не удалось вставить «{expected_name}» за {PASTE_ATTEMPTS} попытки")
