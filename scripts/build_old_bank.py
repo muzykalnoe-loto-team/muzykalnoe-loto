@@ -16,6 +16,29 @@ from scripts.song_names import safe_filename
 
 REPORT = f"{paths.SOURCES}/Банк старых слайдов — отчёт.xlsx"
 WAITING = "ждёт проверки"
+# Правки оператора по песням «проверить»: «источник|слайд» или «raw|написание» → новое название или DROP
+FIXES = f"{paths.OLD_BANK}/правки оператора.json"
+DROP = "удалить"
+
+
+def apply_fixes(entries: list[dict], fixes: dict[str, str]) -> list[dict]:
+    result = []
+    for entry in entries:
+        # правка конкретного слайда или любого слайда с тем же (ошибочным) написанием
+        fix = fixes.get(f"{entry['source']}|{entry['slide_part']}") or fixes.get(f"raw|{entry['raw']}")
+        if fix == DROP:
+            continue
+        if fix:
+            entry = dict(entry, raw=fix, check="")
+        result.append(entry)
+    return result
+
+
+def load_fixes(path: str = FIXES) -> dict[str, str]:
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def assign_file_names(catalog: list[dict]) -> None:
@@ -73,7 +96,7 @@ def build_old_bank(old_design: str = paths.OLD_DESIGN, bank_dir: str = paths.OLD
     entries = []
     for pres in sorted(glob.glob(os.path.join(old_design, "*", "*", "*.pptx"))):
         entries += scan_presentation(pres, svod)
-    catalog = choose_best(entries)
+    catalog = choose_best(apply_fixes(entries, load_fixes()))
     assign_file_names(catalog)
     to_cut = songs_to_cut(catalog)
     cut_ids = {id(c) for c in to_cut}

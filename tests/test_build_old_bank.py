@@ -36,3 +36,32 @@ def test_existing_file_is_recut_unless_it_has_exactly_one_slide(tmp_path):
     assert not is_cut_well(str(bad))
     assert not is_cut_well(str(broken))
     assert not is_cut_well(str(tmp_path / "нет.pptx"))
+
+
+def test_operator_fixes_rename_or_drop_slides():
+    from scripts.build_old_bank import DROP, apply_fixes
+
+    entries = [
+        {"raw": " - Ассорти Красивая любовь", "check": "не узнана", "source": "a.pptx", "slide_part": "ppt/slides/slide1.xml"},
+        {"raw": " - FEDUK", "check": "не узнана", "source": "a.pptx", "slide_part": "ppt/slides/slide2.xml"},
+        {"raw": "Звери - Танцуй", "check": "", "source": "b.pptx", "slide_part": "ppt/slides/slide1.xml"},
+    ]
+    fixes = {"a.pptx|ppt/slides/slide1.xml": "Ассорти - Красивая любовь", "a.pptx|ppt/slides/slide2.xml": DROP}
+
+    result = apply_fixes(entries, fixes)
+
+    assert [(e["raw"], e["check"]) for e in result] == [("Ассорти - Красивая любовь", ""), ("Звери - Танцуй", "")]
+
+
+def test_fix_applies_to_every_slide_with_the_same_wrong_name():
+    # Одна и та же опечатка бывает на слайдах разных игр — решение оператора относится ко всем
+    from scripts.build_old_bank import DROP, apply_fixes
+
+    entries = [
+        {"raw": " - FEDUK", "check": "не узнана", "source": "a.pptx", "slide_part": "ppt/slides/slide2.xml"},
+        {"raw": " - FEDUK", "check": "не узнана", "source": "b.pptx", "slide_part": "ppt/slides/slide9.xml"},
+        {"raw": " - Ассорти Красивая любовь", "check": "не узнана", "source": "c.pptx", "slide_part": "ppt/slides/slide4.xml"},
+    ]
+    fixes = {"raw| - FEDUK": DROP, "raw| - Ассорти Красивая любовь": "Ассорти - Красивая любовь"}
+
+    assert [e["raw"] for e in apply_fixes(entries, fixes)] == ["Ассорти - Красивая любовь"]
