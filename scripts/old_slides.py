@@ -13,7 +13,7 @@ from scripts.song_names import make_raw, norm, split_raw
 
 AUDIO_EXT = (".mp3", ".m4a", ".wav", ".wma", ".aac")
 VIDEO_EXT = (".mp4", ".mov", ".wmv", ".avi", ".m4v")
-IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".bmp")
+IMAGE_EXT = (".png", ".jpg", ".jpeg", ".jfif", ".gif", ".bmp", ".bin")  # .bin в старых играх — PNG
 # Картинка, которая стоит на половине песенных слайдов игры и больше, — оформление, а не фото
 DECOR_SHARE = 0.5
 PLACEHOLDER_AREA = 10**18  # «площадь» картинки в рамке макета: больше любой картинки со своим размером

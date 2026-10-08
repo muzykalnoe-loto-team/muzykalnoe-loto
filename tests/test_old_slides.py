@@ -2,6 +2,7 @@ import io
 import os
 
 import openpyxl
+import pytest
 from PIL import Image
 from pptx import Presentation
 from pptx.opc.package import Part
@@ -99,3 +100,25 @@ def test_photo_inside_layout_placeholder_is_found(tmp_path):
     found = scan_presentation(str(game), load_svod_songs(str(tmp_path)))
 
     assert [f["photo_part"] is not None for f in found] == [True, True]
+
+
+@pytest.mark.parametrize("ext", ["jfif", "bin"])
+def test_photo_with_unusual_extension_is_found(tmp_path, ext):
+    # «Natan - Ананасовый сироп» — фото .jfif (тот же JPEG), «Градусы - До солнца» — .bin (внутри PNG):
+    # считалось, что фото нет
+    import zipfile
+    _write_svod(str(tmp_path), [("Natan", "Ананасовый сироп"), ("Звери", "Танцуй")])
+    game = tmp_path / "Тема" / "Игра" / "1.pptx"
+    os.makedirs(game.parent)
+    plain = tmp_path / "plain.pptx"
+    _make_old_game(str(plain), [(["1", "АНАНАСОВЫЙ СИРОП", "Natan"], (255, 0, 0)), (["2", "ТАНЦУЙ", "Звери"], (0, 255, 0))])
+    with zipfile.ZipFile(plain) as zin, zipfile.ZipFile(game, "w") as zout:
+        for name in zin.namelist():
+            data = zin.read(name)
+            if name.endswith((".xml", ".rels")):
+                data = data.replace(b".png", f".{ext}".encode()).replace(b'Extension="png"', f'Extension="{ext}"'.encode())
+            zout.writestr(name.replace(".png", f".{ext}"), data)
+
+    found = scan_presentation(str(game), load_svod_songs(str(tmp_path)))
+
+    assert (found[0]["photo_part"] or "").endswith(f".{ext}")

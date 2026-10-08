@@ -75,7 +75,13 @@ def test_fill_old_slot_sets_texts_audio_and_keeps_corner_free(opened):
     audio = next(s for s in slide.Shapes if s.Type == 16)
     assert abs(audio.MediaFormat.StartPoint - start) < 2  # тот же фрагмент
     assert audio.AnimationSettings.PlaySettings.PlayOnEntry
-    assert audio.Left + audio.Width <= 0  # значок за краем слайда
+    # как в старых играх: сначала звук, а текст выезжает вместе с ним через паузу (замечание оператора)
+    seq = slide.TimeLine.MainSequence
+    assert seq(1).Shape.Name == audio.Name
+    text_effect = next(seq(i) for i in range(2, seq.Count + 1) if seq(i).Shape.Type == 6)
+    assert text_effect.Timing.TriggerType == 2 and text_effect.Timing.TriggerDelayTime > 0  # «с предыдущим», с паузой
+    # значок в правом верхнем углу, как в старых играх (замечание оператора)
+    assert abs(audio.Left + audio.Width - prs.PageSetup.SlideWidth) < 1 and audio.Top < 20
     assert _top_shape_at(slide, 940, 520) is None  # угол с кнопкой макета свободен
 
 

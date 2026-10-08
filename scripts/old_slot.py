@@ -15,7 +15,8 @@ MSO_MEDIA = 16
 MAX_TITLE_LINES = 2  # правило оператора: название — не больше двух строк, иначе меньше шрифт
 MIN_TITLE_SIZE = 20
 MIN_ARTIST_SIZE = 16
-LINE_SLACK = 1.1  # запас на неровную высоту строк
+LINE_SLACK = 1.1
+ICON_TOP = 8  # отступ значка звука сверху — как на старых слайдах  # запас на неровную высоту строк
 
 
 def insert_photos(pptx_path: str, photos: dict[int, tuple[str, str]]) -> None:
@@ -84,8 +85,11 @@ def fill_old_slot(ppt_app, prs, slide_number: int, old_file: str, title: str, ar
         old.Close()
 
     sound = pasted(1)
-    sound.Left = -sound.Width - 10  # значок за левым краем: не виден и не закрывает кнопку макета
-    sound.Top = 0
-    play = sound.AnimationSettings.PlaySettings
-    play.PlayOnEntry = True  # звук сам включается при открытии слайда
-    play.HideWhileNotPlaying = True
+    # значок — в правом верхнем углу, как в старых играх (нижний правый угол занят кнопкой «Таблица»)
+    sound.Left = prs.PageSetup.SlideWidth - sound.Width
+    sound.Top = ICON_TOP
+    sound.AnimationSettings.PlaySettings.PlayOnEntry = True  # звук сам включается при открытии слайда
+    # Включение звука встаёт в конец очереди — после выезда текста. В старых играх наоборот:
+    # первым звук, а текст («с предыдущим», с паузой из шаблона) выезжает уже под музыку
+    seq = slide.TimeLine.MainSequence
+    next(seq(i) for i in range(1, seq.Count + 1) if seq(i).Shape.Name == sound.Name).MoveTo(1)
