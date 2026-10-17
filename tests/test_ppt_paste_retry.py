@@ -66,3 +66,25 @@ def test_expected_shape_need_not_be_first():
     pasted = ppt_paste.copy_paste_checked(lambda: None, slide, "#2Маши - Босая", 16)
 
     assert pasted is slide.Shapes.pasted[0] and not pasted.deleted
+
+
+class EmptyClipboardOnce(FakeSlideShapes):
+    def __init__(self, results):
+        super().__init__(results)
+        self.failed = False
+
+    def Paste(self):
+        if not self.failed:
+            self.failed = True
+            raise RuntimeError("Clipboard is empty or contains data which may not be pasted here.")
+        return super().Paste()
+
+
+def test_retries_when_clipboard_is_still_empty():
+    # «Нервы - Батареи» на бочонке 59 в долгой сборке: буфер не успел заполниться, PowerPoint ругнулся
+    slide = FakeSlide([FakeShape("Нужная песня", 16)])
+    slide.Shapes = EmptyClipboardOnce([FakeShape("Нужная песня", 16)])
+
+    pasted = ppt_paste.copy_paste_checked(lambda: None, slide, "Нужная песня", 16)
+
+    assert pasted(1).Name == "Нужная песня"

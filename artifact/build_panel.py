@@ -1,7 +1,8 @@
 """Собирает страницу «Панель мероприятий» со встроенным банком песен.
 
 artifact/index.html хранится в git без списка песен; собранная страница
-(artifact/dist/index.html) содержит песни из «Исходники/Банк песен.xlsx» и в git не попадает.
+(artifact/dist/index.html) содержит песни общего банка (видео + старые слайды; если его нет —
+«Исходники/Банк песен.xlsx») и в git не попадает. Каждая песня — [название, 1 если есть только старый слайд].
 Запуск из корня проекта: python artifact/build_panel.py
 """
 import json
@@ -16,7 +17,11 @@ PLACEHOLDER = '<script id="songs-data" type="application/json">[]</script>'
 
 
 def build(bank_path=paths.SONG_BANK, source="artifact/index.html", output="artifact/dist/index.html"):
-    songs = [song["raw"] for song in load_song_bank(bank_path)]
+    if os.path.exists(paths.COMMON_BANK_JSON):
+        with open(paths.COMMON_BANK_JSON, encoding="utf-8") as f:
+            songs = [[e["raw"], 0 if e["video_file"] else 1] for e in json.load(f)]
+    else:
+        songs = [[s["raw"], 0] for s in load_song_bank(bank_path)]
     with open(source, encoding="utf-8") as f:
         page = f.read()
     if PLACEHOLDER not in page:

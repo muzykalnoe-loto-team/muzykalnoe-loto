@@ -128,6 +128,7 @@ button.approve:hover:not(:disabled) { filter: brightness(1.1); }
 .options li[aria-selected="true"], .options li:hover { background: var(--accent-soft); }
 .options li.none { cursor: default; color: var(--muted); background: none; }
 .options mark { background: none; color: var(--accent); font-weight: 600; }
+.options .old-tag { color: var(--muted); font-size: 12px; }
 .wanted { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .wanted li {
   display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
@@ -549,7 +550,8 @@ const norm = (t) => t.toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").tr
 
 try {
   // Песни встраиваются в страницу при сборке: artifact/build_panel.py
-  bank = JSON.parse(document.getElementById("songs-data").textContent).map(raw => ({ raw, key: norm(raw) }));
+  bank = JSON.parse(document.getElementById("songs-data").textContent)
+    .map(([raw, onlyOld]) => ({ raw, key: norm(raw), old: onlyOld === 1 }));
 } catch { bank = []; }
 if (!bank.length) {
   search.disabled = true;
@@ -600,6 +602,7 @@ function showOptions() {
       li.id = "song-opt-" + i;
       li.setAttribute("role", "option");
       li.append(highlight(s.raw, words[0]));
+      if (s.old) li.append(el("small", "old-tag", " (старый слайд)"));
       li.addEventListener("mousedown", (e) => { e.preventDefault(); pick(i); });
       return li;
     }));

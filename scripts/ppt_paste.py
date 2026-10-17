@@ -82,11 +82,15 @@ def _find(shapes, name: str, type_: int):
 
 def copy_paste_checked(copy, target_slide, expected_name: str, expected_type: int):
     # Буфер обмена иногда не успевает обновиться, и вставляется предыдущая песня
-    # (картинкой вместо видео или звука) — сверяем вставленное и повторяем
+    # (картинкой вместо видео или звука) или ещё пуст — PowerPoint тогда ругается
+    # «Clipboard is empty»; сверяем вставленное и повторяем
     for attempt in range(1, PASTE_ATTEMPTS + 1):
         copy()
         time.sleep(0.2 * attempt)
-        pasted = target_slide.Shapes.Paste()
+        try:
+            pasted = target_slide.Shapes.Paste()
+        except Exception:  # буфер ещё пуст — следующая попытка
+            continue
         if _find(pasted, expected_name, expected_type) is not None:
             return pasted
         pasted.Delete()
