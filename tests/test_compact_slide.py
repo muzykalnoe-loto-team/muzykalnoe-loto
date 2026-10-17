@@ -138,3 +138,50 @@ def test_compact_slide_plays_the_same_fragment(tmp_path):
     assert after_fades == before_fades
     assert 4900 <= after_start <= 5100  # 5 секунд запаса до отрывка (просьба оператора)
     assert after_total < before_total / 3  # остальная песня выброшена
+
+
+def test_tag_in_the_middle_of_mp3_is_skipped():
+    # «Герои - Закаты алые»: посреди mp3 второй тег (название, жанр) — разбор сбивался и терял всю песню
+    body = b"TCON\x00\x00\x00\x07\x00\x00\x01\xff\xfbpop"  # внутри тега байты, похожие на заголовок кадра
+    tag = b"ID3\x03\x00\x00\x00\x00\x00" + bytes([len(body)]) + body  # 10 байт заголовка + тело
+    data = FRAME * 5 + tag + FRAME * 5
+    frames = mp3_frames(data)
+    assert len(frames) == 10 and all(data[p:p + n] == FRAME for p, n, _ in frames)
+
+
+def test_random_sync_bytes_are_not_taken_for_a_frame():
+    junk = b"\xff\xfb\x90\x00" + b"\x01" * 50  # похоже на заголовок кадра, но за ним нет следующего кадра
+    data = FRAME * 3 + junk + FRAME * 3
+    frames = mp3_frames(data)
+    assert len(frames) == 6 and all(data[p:p + n] == FRAME for p, n, _ in frames)
+
+
+def test_fragment_outside_parsed_audio_is_an_error():
+    import pytest
+
+    from scripts.compact_slide import fragment_bounds
+    assert fragment_bounds(total_ms=160835, st=31269, end_trimmed=106869) == (31269, 53966)
+    with pytest.raises(ValueError):
+        fragment_bounds(total_ms=4300, st=115600, end_trimmed=5337)  # прочитано 4 с, а отрывок с 1:55
+
+
+def test_cut_follows_powerpoint_clock_when_junk_sits_inside():
+    # PowerPoint считает время mp3 без служебного кадра по размеру файла: мусор посреди песни
+    # для него — тоже «звучащие» секунды. «Герои - Закаты алые»: отрывок сдвинулся на 2,3 с
+    numbered = [HEADER + bytes([i]) * 413 for i in range(100)]  # кадры с номером внутри
+    junk = b"\x00" * (417 * 10)  # 10 кадров по размеру, но не кадры
+    data = b"".join(numbered[:40]) + junk + b"".join(numbered[40:])
+    start = 50 * 417 / 16  # по часам PowerPoint (размер / 16 байт в мс) — начало кадра №40, первого после мусора
+
+    cut, cut_from = cut_mp3(data, start_ms=start, end_ms=start + 10 * FRAME_MS, margin_ms=0)
+
+    assert abs(cut_from - start) < 1
+    assert cut[:417] == numbered[40]  # а не кадр №50, как по счёту кадров
+
+
+def test_variable_bitrate_is_not_cut():
+    # после обрезки у такого mp3 нет служебного кадра, и PowerPoint считал бы его время неверно
+    import pytest
+    frame160 = b"\xff\xfb\xa0\x00" + b"\x00" * (522 - 4)  # 160 кбит/с
+    with pytest.raises(ValueError):
+        cut_mp3(FRAME * 20 + frame160 * 20, start_ms=400, end_ms=700, margin_ms=0)  # отрывок на стыке

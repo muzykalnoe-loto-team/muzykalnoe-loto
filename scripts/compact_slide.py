@@ -44,35 +44,76 @@ def _frame(data: bytes, pos: int) -> tuple[int, int, int] | None:
 
 
 def mp3_frames(data: bytes) -> list[tuple[int, int, float]]:
-    """Звуковые кадры mp3: (начало в байтах, длина в байтах, длительность в мс)."""
-    frames, pos = [], _id3_size(data)
-    while pos < len(data):
+    """Звуковые кадры mp3: (начало в байтах, длина в байтах, длительность в мс).
+    Кадр засчитывается, только если сразу за ним — следующий кадр, тег или конец файла:
+    иначе случайные байты «0xFF 0xFB» внутри тегов и мусора сбивают разбор."""
+    frames, pos, n = [], 0, len(data)
+    while pos < n:
+        if data[pos:pos + 3] == b"ID3":  # тег ID3v2 — в начале, а бывает и посреди файла
+            size = _id3_size(data[pos:pos + 10])
+            if size:
+                pos += size
+                continue
+        if data[pos:pos + 3] == b"TAG" and n - pos <= 128:  # тег ID3v1 в конце файла
+            break
         info = _frame(data, pos)
-        if info is None:
-            if data[pos:pos + 3] == b"TAG":  # тег ID3v1 в конце файла
-                break
-            pos += 1  # мусор между кадрами — ищем следующий заголовок
+        nxt = pos + info[0] if info else 0
+        if info is None or nxt > n or not (nxt == n or _frame(data, nxt) or data[nxt:nxt + 3] in (b"ID3", b"TAG")):
+            pos += 1  # не кадр — ищем следующий заголовок
             continue
         length, samples, rate = info
-        if pos + length > len(data):
-            break
         if not any(tag in data[pos + 4:pos + 40] for tag in VBR_TAGS):
             frames.append((pos, length, samples / rate * 1000))
-        pos += length
+        pos = nxt
     return frames
 
 
+def fragment_bounds(total_ms: float, st: float, end_trimmed: float) -> tuple[float, float]:
+    """Начало и конец играемого отрывка (мс). Ошибка, если отрывок не помещается в прочитанный звук —
+    значит, mp3 разобран не полностью, и сжимать его нельзя (песня в игре замолчала бы)."""
+    end_point = total_ms - end_trimmed
+    if not 0 <= st < end_point:
+        raise ValueError(f"отрывок {st:.0f}–{end_point:.0f} мс вне прочитанного звука ({total_ms:.0f} мс)")
+    return st, end_point
+
+
+def _bitrate(data: bytes, pos: int) -> int:
+    version, layer = (data[pos + 1] >> 3) & 3, (data[pos + 1] >> 1) & 3
+    table = BITRATES[(MPEG1, layer)] if version == MPEG1 else BITRATES["MPEG2"]
+    return table[data[pos + 2] >> 4] * 1000
+
+
+def mp3_clock(data: bytes) -> tuple[list[tuple[int, int, float]], list[float], float]:
+    """Кадры, время начала каждого и длина всего звука — так, как их считает PowerPoint.
+    Есть служебный кадр с длиной (Xing/Info/VBRI) — время по кадрам; нет — по размеру файла
+    от начала звука с битрейтом первого кадра (мусор посреди файла для PowerPoint тоже «звучит»)."""
+    frames = mp3_frames(data)
+    if not frames:
+        return frames, [], 0.0
+    if any(tag in data[:frames[0][0] + 64] for tag in VBR_TAGS):
+        starts, t = [], 0.0
+        for _, _, duration in frames:
+            starts.append(t)
+            t += duration
+        return frames, starts, t
+    audio_start = _id3_size(data[:10])
+    bytes_per_ms = _bitrate(data, frames[0][0]) / 8 / 1000
+    end = len(data) - (128 if data[-128:-125] == b"TAG" else 0)
+    return frames, [(pos - audio_start) / bytes_per_ms for pos, _, _ in frames], (end - audio_start) / bytes_per_ms
+
+
 def cut_mp3(data: bytes, start_ms: float, end_ms: float, margin_ms: float = MARGIN_MS) -> tuple[bytes, float]:
-    """Оставляет кадры отрывка [start_ms; end_ms] с запасом margin_ms по краям.
+    """Оставляет кадры отрывка [start_ms; end_ms] (по часам PowerPoint) с запасом margin_ms по краям.
     Возвращает новые байты и время (мс) в старом файле, с которого начинается новый."""
-    kept, cut_from, t = [], None, 0.0
-    for pos, length, duration in mp3_frames(data):
-        if t + duration > start_ms - margin_ms and t < end_ms + margin_ms:
-            if cut_from is None:
-                cut_from = t
-            kept.append(data[pos:pos + length])
-        t += duration
-    return b"".join(kept), cut_from or 0.0
+    frames, starts, _ = mp3_clock(data)
+    kept = [(pos, length, t) for (pos, length, duration), t in zip(frames, starts)
+            if t + duration > start_ms - margin_ms and t < end_ms + margin_ms]
+    if not kept:
+        raise ValueError("в отрывок не попал ни один кадр звука")
+    if len({_bitrate(data, pos) for pos, _, _ in kept}) > 1:
+        # без служебного кадра PowerPoint посчитал бы время такого файла по размеру — неверно
+        raise ValueError("переменный битрейт — звук не обрезаем")
+    return b"".join(data[pos:pos + length] for pos, length, _ in kept), kept[0][2]
 
 
 def shifted_trim(st: float, end_trimmed: float, total_ms: float, cut_from_ms: float, kept_ms: float) -> tuple[float, float]:
@@ -124,9 +165,9 @@ def compact_slide(src: str, out_path: str, photo_part: str | None) -> str | None
         if trim:
             audio_part = targets[media.group(1)]
             data = zin.read(audio_part)
-            total = sum(d for _, _, d in mp3_frames(data))
+            total = mp3_clock(data)[2]
             st, end_trimmed = float(_attr(trim.group(0), "st") or 0), float(_attr(trim.group(0), "end") or 0)
-            cut, cut_from = cut_mp3(data, st, total - end_trimmed)
+            cut, cut_from = cut_mp3(data, *fragment_bounds(total, st, end_trimmed))
             new_st, new_end = shifted_trim(st, end_trimmed, total, cut_from, sum(d for _, _, d in mp3_frames(cut)))
             replaced[audio_part] = cut
             xml = xml.replace(trim.group(0), f'<p14:trim st="{new_st:g}" end="{max(0, new_end):g}"/>')

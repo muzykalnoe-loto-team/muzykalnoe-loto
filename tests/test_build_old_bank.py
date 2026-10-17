@@ -105,7 +105,7 @@ def test_new_bank_file_is_cut_and_compacted(tmp_path, monkeypatch):
 def test_compacted_file_is_not_compacted_again(tmp_path, monkeypatch):
     build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
     build_old_bank.prepare_bank_file(dict(entry), bank, previous={})
-    previous = {entry["file"]: dict(entry, compact=True, photo_part="ppt/media/сжатое.jpg")}
+    previous = {entry["file"]: dict(entry, compact=build_old_bank.COMPACT_VERSION, photo_part="ppt/media/сжатое.jpg")}
     calls.clear()
 
     again = dict(entry)
@@ -166,3 +166,17 @@ def test_file_is_recut_when_recorded_source_differs(tmp_path, monkeypatch):
     build_old_bank.prepare_bank_file(entry, bank, previous=previous)
 
     assert calls == ["ppt/media/image2.png"]
+
+
+def test_file_compacted_by_old_version_is_recut_and_compacted_again(tmp_path, monkeypatch):
+    # сжатие исправлено (часы PowerPoint) — файлы, сжатые прежней версией, режутся из старой игры заново
+    build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
+    build_old_bank.prepare_bank_file(dict(entry), bank, previous={})
+    previous = {entry["file"]: dict(entry, compact=True, photo_part="ppt/media/сжатое.jpg",
+                                    cut_from=f"{entry['source']}|{entry['slide_part']}")}
+    calls.clear()
+
+    build_old_bank.prepare_bank_file(entry, bank, previous=previous)
+
+    assert calls == ["ppt/media/image2.png"]  # исходное имя фото — значит, нарезан заново
+    assert entry["compact"] == build_old_bank.COMPACT_VERSION

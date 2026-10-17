@@ -20,6 +20,9 @@ WAITING = "ждёт проверки"
 # Правки оператора по песням «проверить»: «источник|слайд» или «raw|написание» → новое название или DROP
 FIXES = f"{paths.OLD_BANK}/правки оператора.json"
 DROP = "удалить"
+# Версия сжатия: файлы, сжатые прежней, режутся из старой игры и сжимаются заново
+# 2 (2026-10-17) — время звука по часам PowerPoint, теги посреди mp3, переменный битрейт не режем
+COMPACT_VERSION = 2
 
 
 def apply_fixes(entries: list[dict], fixes: dict[str, str]) -> list[dict]:
@@ -91,9 +94,9 @@ def prepare_bank_file(entry: dict, bank_dir: str, previous: dict[str, dict]) -> 
     # файл нарезан из того же слайда, что выбран сейчас (лучший слайд мог смениться после правок узнавания);
     # для файлов, нарезанных до записи «cut_from», сверяем номер слайда внутри файла
     same_slide = before["cut_from"] == cut_from if before.get("cut_from") else _has_part(out, entry["slide_part"])
-    cut_well = is_cut_well(out) and same_slide
-    if cut_well and before.get("compact"):
-        entry.update(compact=True, photo_part=before["photo_part"])
+    cut_well = is_cut_well(out) and same_slide and before.get("compact") in (None, False, COMPACT_VERSION)
+    if cut_well and before.get("compact") == COMPACT_VERSION:
+        entry.update(compact=COMPACT_VERSION, photo_part=before["photo_part"])
         return
     tmp = out + ".part"
     if not cut_well:
@@ -102,7 +105,7 @@ def prepare_bank_file(entry: dict, bank_dir: str, previous: dict[str, dict]) -> 
     try:
         new_photo = compact_slide(out, tmp, entry["photo_part"])
         os.replace(tmp, out)
-        entry.update(compact=True, photo_part=new_photo)
+        entry.update(compact=COMPACT_VERSION, photo_part=new_photo)
     except Exception as error:  # странный файл — оставляем несжатым, песня в банке остаётся
         if os.path.exists(tmp):
             os.remove(tmp)
