@@ -65,3 +65,104 @@ def test_fix_applies_to_every_slide_with_the_same_wrong_name():
     fixes = {"raw| - FEDUK": DROP, "raw| - Ассорти Красивая любовь": "Ассорти - Красивая любовь"}
 
     assert [e["raw"] for e in apply_fixes(entries, fixes)] == ["Ассорти - Красивая любовь"]
+
+
+def _bank_case(tmp_path, monkeypatch):
+    """Игра из двух песенных слайдов и запись каталога для первого; сжатие подменено счётчиком."""
+    import os
+
+    from scripts import build_old_bank
+    from tests.test_old_slides import _make_old_game
+
+    game = tmp_path / "игра.pptx"
+    _make_old_game(str(game), [(["1", "ТАНЦУЙ", "Звери"], (255, 0, 0)), (["2", "ИСКАЛА", "Земфира"], None)])
+    calls = []
+
+    def fake_compact(src, out, photo_part):
+        calls.append(photo_part)
+        with open(src, "rb") as f, open(out, "wb") as g:
+            g.write(f.read())
+        return "ppt/media/сжатое.jpg"
+
+    monkeypatch.setattr(build_old_bank, "compact_slide", fake_compact)
+    entry = {"raw": "Звери - Танцуй", "file": "Звери - Танцуй.pptx", "source": str(game),
+             "slide_part": "ppt/slides/slide1.xml", "photo_part": "ppt/media/image2.png"}
+    bank = tmp_path / "банк"
+    os.makedirs(bank)
+    return build_old_bank, entry, str(bank), calls
+
+
+def test_new_bank_file_is_cut_and_compacted(tmp_path, monkeypatch):
+    build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
+
+    build_old_bank.prepare_bank_file(entry, bank, previous={})
+
+    assert build_old_bank.is_cut_well(f"{bank}/Звери - Танцуй.pptx")
+    assert calls == ["ppt/media/image2.png"]
+    assert entry["compact"] and entry["photo_part"] == "ppt/media/сжатое.jpg"
+
+
+def test_compacted_file_is_not_compacted_again(tmp_path, monkeypatch):
+    build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
+    build_old_bank.prepare_bank_file(dict(entry), bank, previous={})
+    previous = {entry["file"]: dict(entry, compact=True, photo_part="ppt/media/сжатое.jpg")}
+    calls.clear()
+
+    again = dict(entry)
+    build_old_bank.prepare_bank_file(again, bank, previous=previous)
+
+    assert calls == []  # повторная пересборка не делает ту же работу дважды
+    assert again["compact"] and again["photo_part"] == "ppt/media/сжатое.jpg"
+
+
+def test_already_cut_but_not_compacted_file_gets_compacted(tmp_path, monkeypatch):
+    # банк, нарезанный до появления сжатия: файл на месте, в прошлом каталоге отметки «сжат» нет
+    build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
+    from scripts.slide_split import extract_slide
+    extract_slide(entry["source"], entry["slide_part"], f"{bank}/{entry['file']}")
+
+    build_old_bank.prepare_bank_file(entry, bank, previous={entry["file"]: dict(entry)})
+
+    assert calls == ["ppt/media/image2.png"] and entry["compact"]
+
+
+def test_compaction_error_keeps_uncompressed_file(tmp_path, monkeypatch):
+    build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
+
+    def broken(src, out, photo_part):
+        raise ValueError("странный mp3")
+
+    monkeypatch.setattr(build_old_bank, "compact_slide", broken)
+    build_old_bank.prepare_bank_file(entry, bank, previous={})
+
+    assert build_old_bank.is_cut_well(f"{bank}/Звери - Танцуй.pptx")  # песня в банке осталась, просто не сжата
+    assert not entry["compact"] and "странный mp3" in entry["compact_error"]
+    assert entry["photo_part"] == "ppt/media/image2.png"
+
+
+def test_file_is_recut_when_best_slide_changed(tmp_path, monkeypatch):
+    # после исправления .jfif/.bin «лучшим» у песни стал другой слайд, а файл остался от прежнего
+    build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
+    from scripts.slide_split import extract_slide
+    extract_slide(entry["source"], "ppt/slides/slide2.xml", f"{bank}/{entry['file']}")  # нарезан не тот слайд
+    previous = {entry["file"]: dict(entry, compact=True, photo_part="ppt/media/сжатое.jpg")}
+
+    build_old_bank.prepare_bank_file(entry, bank, previous=previous)
+
+    import zipfile
+    with zipfile.ZipFile(f"{bank}/{entry['file']}") as z:
+        assert "ppt/slides/slide1.xml" in z.namelist()
+    assert calls == ["ppt/media/image2.png"]  # нарезан заново и сжат
+    assert entry["cut_from"] == f"{entry['source']}|ppt/slides/slide1.xml"
+
+
+def test_file_is_recut_when_recorded_source_differs(tmp_path, monkeypatch):
+    build_old_bank, entry, bank, calls = _bank_case(tmp_path, monkeypatch)
+    build_old_bank.prepare_bank_file(dict(entry), bank, previous={})
+    previous = {entry["file"]: dict(entry, compact=True, photo_part="ppt/media/сжатое.jpg",
+                                    cut_from="другая игра.pptx|ppt/slides/slide1.xml")}
+    calls.clear()
+
+    build_old_bank.prepare_bank_file(entry, bank, previous=previous)
+
+    assert calls == ["ppt/media/image2.png"]

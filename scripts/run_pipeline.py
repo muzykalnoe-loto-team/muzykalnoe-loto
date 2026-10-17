@@ -10,6 +10,14 @@ from scripts.validate_selection import validate_selection
 
 BLANKS_NAME = "Бланки.xlsm"
 PRESENTATION_NAME = "Презентация.pptx"
+SIZE_LIMIT_MB = 995  # больше Яндекс Диск может не принять (решение оператора)
+
+
+def size_warning(path: str, limit_mb: int = SIZE_LIMIT_MB) -> str:
+    size_mb = os.path.getsize(path) / 2**20
+    if size_mb <= limit_mb:
+        return ""
+    return f"Презентация весит {size_mb:.0f} МБ — больше {limit_mb} МБ: на Яндекс Диск может не загрузиться"
 
 
 def _load_bank(song_bank: str) -> list[dict]:
@@ -53,4 +61,7 @@ def run_pipeline(
     presentation_path = os.path.join(output_dir, PRESENTATION_NAME)
     assemble_presentation(presentation_template, archive_folder, resolve_files(barrels, index), presentation_path)
 
-    return {"blanks_path": blanks_path, "presentation_path": presentation_path}
+    warning = size_warning(presentation_path)
+    if warning:
+        print(warning)
+    return {"blanks_path": blanks_path, "presentation_path": presentation_path, "warning": warning}

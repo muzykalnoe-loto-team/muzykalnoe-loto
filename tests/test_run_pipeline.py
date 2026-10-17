@@ -22,7 +22,7 @@ def test_run_pipeline_produces_both_files(tmp_path):
 
     blanks = tmp_path / "Бланки.xlsm"
     presentation = tmp_path / "Презентация.pptx"
-    assert result == {"blanks_path": str(blanks), "presentation_path": str(presentation)}
+    assert result == {"blanks_path": str(blanks), "presentation_path": str(presentation), "warning": ""}
 
     wb = openpyxl.load_workbook(blanks, data_only=True)
     with open(SELECTION, encoding="utf-8") as f:
@@ -87,3 +87,13 @@ def test_earlier_event_list_passes_checks_with_common_bank():
     assert check_kinds(barrels, index) == []
     for b in resolve_files(barrels, index):
         assert os.path.exists(os.path.join(paths.SLIDES_ARCHIVE, b["file"]))
+
+
+def test_size_warning_when_presentation_is_too_big(tmp_path):
+    from scripts.run_pipeline import size_warning
+    big, small = tmp_path / "big.pptx", tmp_path / "small.pptx"
+    big.write_bytes(b"0" * 2_000_000)
+    small.write_bytes(b"0" * 500_000)
+
+    assert "больше 1 МБ" in size_warning(str(big), limit_mb=1)  # лимит Яндекс Диска — 995 МБ
+    assert size_warning(str(small), limit_mb=1) == ""

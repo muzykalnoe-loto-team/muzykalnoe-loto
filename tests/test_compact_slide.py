@@ -65,18 +65,28 @@ def test_small_photo_is_not_enlarged():
     assert img.size == (800, 400)
 
 
-def _bank_entry():
+def _bank_entry(tmp_path):
+    """Несжатый слайд «Little Big - UNO», нарезанный заново из старой игры (файл банка уже сжат)."""
     import json
     import os
+    import posixpath
+    import zipfile
 
     import pytest
 
     from scripts import paths
+    from scripts.slide_split import extract_slide
     if not os.path.exists(paths.OLD_CATALOG):
         pytest.skip("банк старых слайдов ещё не собран")
     with open(paths.OLD_CATALOG, encoding="utf-8") as f:
         entry = next(c for c in json.load(f) if c["raw"].startswith("Little Big - UNO"))
-    return os.path.abspath(os.path.join(paths.OLD_BANK, entry["file"])), entry["photo_part"]
+    original = str(tmp_path / "оригинал.pptx")
+    extract_slide(entry["source"], entry["slide_part"], original)
+    # в каталоге — имя уже сжатого фото (.jpg); у оригинала то же имя, но своё расширение
+    stem = posixpath.splitext(entry["photo_part"])[0]
+    with zipfile.ZipFile(original) as z:
+        photo = next(n for n in z.namelist() if posixpath.splitext(n)[0] == stem)
+    return original, photo
 
 
 def test_compact_slide_makes_file_smaller_and_photo_jpeg(tmp_path):
@@ -85,7 +95,7 @@ def test_compact_slide_makes_file_smaller_and_photo_jpeg(tmp_path):
     import zipfile
 
     from scripts.compact_slide import compact_slide
-    src, photo_part = _bank_entry()
+    src, photo_part = _bank_entry(tmp_path)
     out = tmp_path / "сжатый.pptx"
 
     new_photo = compact_slide(src, str(out), photo_part)
@@ -105,7 +115,7 @@ def test_compact_slide_plays_the_same_fragment(tmp_path):
     import win32com.client as win32
 
     from scripts.compact_slide import compact_slide
-    src, photo_part = _bank_entry()
+    src, photo_part = _bank_entry(tmp_path)
     out = tmp_path / "сжатый.pptx"
     compact_slide(src, str(out), photo_part)
 
