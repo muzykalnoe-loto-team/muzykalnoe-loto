@@ -157,6 +157,22 @@ def preview_variants(variants: list[dict], out_dir: str) -> dict:
     return {"pptx": pptx, "pngs": pngs, "arts": arts, "warnings": warnings}
 
 
+def theme_slide_file(theme: dict, out_pptx: str) -> str:
+    # файл с одним готовым тематическим слайдом (SlideID 374) — для архива
+    out_pptx = os.path.abspath(out_pptx)
+    shutil.copy(paths.PRESENTATION_TEMPLATE, out_pptx)
+    app = _powerpoint()
+    prs = app.Presentations.Open(out_pptx, WithWindow=False)
+    try:
+        _keep_only(prs, THEME_SLIDE_ID)
+        fill_theme_slide(prs.Slides(1), theme["title"], theme["glow"], os.path.abspath(theme["art_png"]))
+        prs.Save()
+    finally:
+        prs.Close()
+        _quit_if_idle(app)
+    return out_pptx
+
+
 def _slide_index(pptx: str, slide_id: int) -> int:
     # номер слайда по SlideID без открытия файла игры целиком (он бывает почти 1 ГБ)
     with zipfile.ZipFile(pptx) as z:

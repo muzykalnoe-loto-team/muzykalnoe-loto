@@ -17,6 +17,7 @@ def assemble_presentation(
     barrels: list[dict],
     output_path: str,
     old_bank_folder: str = paths.OLD_BANK,
+    finish=None,
 ) -> None:
     # 1. Все файлы песен на месте — до запуска PowerPoint
     resolved = []
@@ -51,6 +52,9 @@ def assemble_presentation(
                     fill_old_slot(ppt_app, template_prs, slot[barrel["number"]], song_file, title, artist)
                 else:
                     insert_song_slide(ppt_app, template_prs, song_file, slot[barrel["number"]])
+            # доделки в уже открытой игре (номинации) — чтобы не открывать почти 1 ГБ второй раз
+            if finish is not None:
+                finish(template_prs)
             template_prs.Save()
         finally:
             template_prs.Close()

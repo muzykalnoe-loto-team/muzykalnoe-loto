@@ -22,7 +22,8 @@ def test_run_pipeline_produces_both_files(tmp_path):
 
     blanks = tmp_path / "Бланки.xlsm"
     presentation = tmp_path / "Презентация.pptx"
-    assert result == {"blanks_path": str(blanks), "presentation_path": str(presentation), "warning": ""}
+    assert result == {"blanks_path": str(blanks), "presentation_path": str(presentation), "warning": "",
+                      "nominations": None}
 
     wb = openpyxl.load_workbook(blanks, data_only=True)
     with open(SELECTION, encoding="utf-8") as f:
@@ -97,3 +98,67 @@ def test_size_warning_when_presentation_is_too_big(tmp_path):
 
     assert "больше 1 МБ" in size_warning(str(big), limit_mb=1)  # лимит Яндекс Диска — 995 МБ
     assert size_warning(str(small), limit_mb=1) == ""
+
+
+def test_themed_without_picture_is_rejected_before_office(tmp_path):
+    selected = tmp_path / "selected_songs.json"
+    shutil.copy(SELECTION, selected)
+    with pytest.raises(ValueError, match="картинк"):
+        run_pipeline(str(selected), n_individual=1, n_team=1, output_dir=str(tmp_path),
+                     nominations={"themed": True, "choices": {}, "theme": None})
+    assert os.listdir(tmp_path) == ["selected_songs.json"]
+
+
+def test_unknown_nomination_is_rejected_before_office(tmp_path):
+    selected = tmp_path / "selected_songs.json"
+    shutil.copy(SELECTION, selected)
+    with pytest.raises(ValueError, match="раунда"):
+        run_pipeline(str(selected), n_individual=1, n_team=1, output_dir=str(tmp_path),
+                     nominations={"themed": False, "choices": {"2": "sing"}, "theme": None})
+    assert os.listdir(tmp_path) == ["selected_songs.json"]
+
+
+@pytest.mark.integration
+def test_pipeline_applies_nominations_and_records_history(tmp_path, monkeypatch):
+    from scripts.nominations import load_history
+    monkeypatch.setattr(paths, "NOMINATION_HISTORY", str(tmp_path / "h.json"))
+    selected = tmp_path / "selected_songs.json"
+    shutil.copy(SELECTION, selected)  # обычная игра, «Авто»; выбор из брифа приходит строками-ключами
+    result = run_pipeline(str(selected), n_individual=1, n_team=1, output_dir=str(tmp_path),
+                          event="Проба", event_date="2026-10-19",
+                          nominations={"themed": False, "choices": {"3": "nobrakes"}, "theme": None})
+    assert result["nominations"] == {1: "sing", 2: "goddess", 3: "nobrakes"}
+    assert load_history(str(tmp_path / "h.json"))[-1]["event"] == "Проба"
+    ids = [s.slide_id for s in Presentation(result["presentation_path"]).slides]
+    assert len(ids) == 118 - 4 and {375, 259, 378} <= set(ids)
+
+
+@pytest.mark.integration
+def test_locked_archive_does_not_break_build(tmp_path, monkeypatch):
+    # архив — копия шаблона во временной папке, открытая в PowerPoint на время сборки (как у оператора)
+    import win32com.client as win32
+
+    from scripts.theme_art import render_scene
+    from scripts.theme_scenes import THEMES
+    archive = tmp_path / "Номинация.pptx"
+    shutil.copy(paths.PRESENTATION_TEMPLATE, archive)
+    monkeypatch.setattr(paths, "NOMINATION_ARCHIVE", str(archive))
+    monkeypatch.setattr(paths, "NOMINATION_HISTORY", str(tmp_path / "h.json"))
+    art = render_scene(THEMES["gatsby"]["scene"], str(tmp_path / "g.png"), seed="gatsby")
+    app = win32.Dispatch("PowerPoint.Application")
+    held = app.Presentations.Open(str(archive), WithWindow=False)
+    try:
+        selected = tmp_path / "selected_songs.json"
+        shutil.copy(SELECTION, selected)
+        (tmp_path / "игра").mkdir()
+        result = run_pipeline(str(selected), n_individual=1, n_team=1, output_dir=str(tmp_path / "игра"),
+                              event="Гэтсби-бал", event_date="2026-11-01",
+                              nominations={"themed": True, "choices": {}, "theme": {
+                                  "title": THEMES["gatsby"]["title"], "glow": THEMES["gatsby"]["glow"],
+                                  "art_png": art, "name": "Гэтсби"}})
+    finally:
+        held.Close()
+        if app.Presentations.Count == 0:
+            app.Quit()
+    assert os.path.exists(result["presentation_path"]) and "архив" in result["warning"].lower()
+    assert result["nominations"][1] == "theme"
