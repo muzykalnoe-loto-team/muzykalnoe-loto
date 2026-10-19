@@ -1,5 +1,5 @@
 # Вид слайда у бочонка: "video" — караоке из видео-банка, "old" — старый слайд (фото + звук).
-# В смешанной игре бочонки, кратные 3, — старые слайды, остальные — видео.
+# Бочонки, кратные 3, — всегда старые слайды, остальные — видео (список из одних видео не собирается).
 from scripts.song_names import norm
 
 KIND_NAMES = {"video": "видео", "old": "старый слайд"}
@@ -10,19 +10,14 @@ def bank_index(bank: list[dict]) -> dict[str, dict]:
     return {norm(e["raw"]): e for e in bank}
 
 
-def is_mixed(barrels: list[dict]) -> bool:
-    return any(b.get("kind") == "old" for b in barrels)
-
-
 def check_kinds(barrels: list[dict], index: dict[str, dict]) -> list[str]:
-    mixed = is_mixed(barrels)
     errors = []
     for b in barrels:
         number, song, kind = b["number"], b["song"], b.get("kind", "video")
         if kind not in KIND_NAMES:
             errors.append(f"Бочонок {number}: непонятный вид «{kind}»")
             continue
-        want = "old" if mixed and number % 3 == 0 else "video"
+        want = "old" if number % 3 == 0 else "video"
         if kind != want:
             errors.append(f"Бочонок {number} («{song}»): здесь должен быть {KIND_NAMES[want]}, а стоит {KIND_NAMES[kind]}")
             continue

@@ -10,7 +10,8 @@ from scripts import paths
 from scripts.export_selection import export_selection
 from scripts.run_pipeline import run_pipeline
 
-SELECTION = f"{paths.EVENTS}/пример/selected_songs.json"
+# 60 видео и 30 старых слайдов (бочонки 3, 6 … 90)
+SELECTION = f"{paths.EVENTS}/пример/selected_songs — смешанный.json"
 
 
 @pytest.mark.integration
@@ -34,9 +35,9 @@ def test_run_pipeline_produces_both_files(tmp_path):
 
     prs = Presentation(str(presentation))
     assert len(prs.slides) == 118
-    # на слоте бочонка 90 (слайд 105) — видео нужной песни
-    names = [s.name for s in prs.slides[104].shapes]
-    assert any(n.startswith(barrels[89]["song"].split(" - ")[0]) for n in names)
+    # на слоте бочонка 89 (слайд 104) — видео нужной песни
+    names = [s.name for s in prs.slides[103].shapes]
+    assert any(n.startswith(barrels[88]["song"].split(" - ")[0]) for n in names)
 
 
 def test_run_pipeline_rejects_bad_selection_before_office(tmp_path):
@@ -57,6 +58,14 @@ def _common_bank():
     return load_common_bank()
 
 
+def test_all_video_list_is_rejected_before_office(tmp_path):
+    selected_path = tmp_path / "selected_songs.json"
+    shutil.copy(f"{paths.EVENTS}/пример/selected_songs.json", selected_path)  # старый пример: 90 видео
+    with pytest.raises(ValueError, match="Бочонок 3"):
+        run_pipeline(str(selected_path), n_individual=1, n_team=1, output_dir=str(tmp_path))
+    assert os.listdir(tmp_path) == ["selected_songs.json"]
+
+
 def test_run_pipeline_rejects_old_slide_on_wrong_barrel(tmp_path):
     bank = _common_bank()
     old = [e["raw"] for e in bank if e["old_file"]][:30]
@@ -75,7 +84,7 @@ def test_run_pipeline_rejects_old_slide_on_wrong_barrel(tmp_path):
     assert sorted(os.listdir(tmp_path)) == ["selected_songs.json"]
 
 
-def test_earlier_event_list_passes_checks_with_common_bank():
+def test_earlier_event_list_is_found_in_common_bank():
     # список «Готического бала» собран до общего банка: часть песен в нём написана иначе (ё/е, регистр)
     from scripts.barrel_kinds import bank_index, check_kinds, resolve_files
     from scripts.validate_selection import validate_selection
@@ -85,7 +94,9 @@ def test_earlier_event_list_passes_checks_with_common_bank():
 
     assert validate_selection([b["song"] for b in barrels], bank)["errors"] == []
     index = bank_index(bank)
-    assert check_kinds(barrels, index) == []
+    # он из одних видео — такой список сборка теперь не принимает: на бочонках 3, 6 … 90 нужны старые слайды
+    errors = check_kinds(barrels, index)
+    assert len(errors) == 30 and all("старый слайд" in e for e in errors)
     for b in resolve_files(barrels, index):
         assert os.path.exists(os.path.join(paths.SLIDES_ARCHIVE, b["file"]))
 

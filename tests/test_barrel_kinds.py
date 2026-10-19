@@ -27,10 +27,17 @@ def test_old_kind_requires_old_slide_file():
     assert errors and "нет старого слайда" in errors[0]
 
 
-def test_list_without_kind_is_all_video():
+def test_every_third_barrel_must_be_old_even_in_all_video_list():
+    # список только из видео (как до старых слайдов) больше не собирается: на местах 3, 6 … 90 — старые слайды
     legacy = [{"number": 1, "song": "Видео - Песня"}, {"number": 3, "song": "Обе - Песня"}]
+    errors = check_kinds(legacy, BANK)
+    assert len(errors) == 1 and "Бочонок 3" in errors[0] and "старый слайд" in errors[0]
+
+
+def test_barrel_without_kind_is_video():
+    legacy = [{"number": 1, "song": "Видео - Песня"}, {"number": 3, "song": "Обе - Песня", "kind": "old"}]
     assert check_kinds(legacy, BANK) == []
-    assert [b["kind"] for b in resolve_files(legacy, BANK)] == ["video", "video"]
+    assert [b["kind"] for b in resolve_files(legacy, BANK)] == ["video", "old"]
 
 
 def test_resolve_files_takes_file_of_the_right_kind():
