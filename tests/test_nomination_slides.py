@@ -111,3 +111,51 @@ def test_themed_game_fills_slide_and_drops_regular_round1(opened, tmp_path):
     full = [s for s in slide.Shapes if s.Type == 13 and s.Width > 900]
     assert len(full) == 1 and full[0].ZOrderPosition == 1  # одна картинка на весь слайд, под всем остальным
     assert _corner_button(slide).ZOrderPosition > 1  # кнопка в углу поверх картинки
+
+
+def _variants():
+    from scripts.theme_scenes import THEMES
+    return [{"title": "БЛЕСК\vПО‑ГЭТСБИ", "glow": "#E8B64C", "scene": THEMES["gatsby"]["scene"], "seed": "a"},
+            {"title": "ТЬМА ВАМ\vК ЛИЦУ", "glow": "#8A3DFF", "scene": THEMES["gothic"]["scene"], "seed": "b"}]
+
+
+def test_preview_has_two_slides_and_pictures(tmp_path):
+    import os
+
+    from pptx import Presentation
+
+    from scripts.nomination_slides import preview_variants
+    res = preview_variants(_variants(), str(tmp_path))
+    assert len(res["pngs"]) == 2 and all(os.path.exists(p) for p in res["pngs"] + res["arts"])
+    assert len(Presentation(res["pptx"]).slides) == 2 and res["warnings"] == []
+
+
+def test_too_long_title_is_reported(tmp_path):
+    from scripts.nomination_slides import preview_variants
+    v = [dict(_variants()[0], title="ОЧЕНЬ ДЛИННЫЙ ЗАГОЛОВОК\vКОТОРЫЙ НЕ ВЛЕЗЕТ")]
+    warnings = preview_variants(v, str(tmp_path))["warnings"]
+    assert len(warnings) == 1 and "строк" in warnings[0] and "1" in warnings[0]
+
+
+def test_archive_grows_by_one_slide_with_note(tmp_path):
+    # в тесте архив читать можно — запрет касается настоящего архива
+    from pptx import Presentation
+
+    from scripts.nomination_slides import append_to_archive, preview_variants
+    game = preview_variants(_variants()[:1], str(tmp_path))["pptx"]  # в нём тематический слайд (SlideID 374)
+    archive = str(tmp_path / "Номинация.pptx")
+    assert append_to_archive(game, "Гэтсби-бал", "2026-11-01", "Гэтсби", archive) == ""
+    assert append_to_archive(game, "Ещё бал", "2026-12-01", "Гэтсби", archive) == ""
+    prs = Presentation(archive)
+    assert len(prs.slides) == 2
+    assert "Ещё бал — 2026-12-01 — Гэтсби" in prs.slides[-1].notes_slide.notes_text_frame.text
+    assert any("ГЭТСБИ" in s.text_frame.text for s in prs.slides[-1].shapes if s.has_text_frame)
+
+
+def test_busy_archive_gives_warning_not_error(tmp_path, opened):
+    # архив открыт в PowerPoint (у оператора) — игра собирается, дописать нельзя: предупреждение
+    from scripts.nomination_slides import append_to_archive, preview_variants
+    app, prs = opened
+    game = preview_variants(_variants()[:1], str(tmp_path))["pptx"]
+    warning = append_to_archive(game, "Бал", "2026-11-01", "Гэтсби", prs.FullName)
+    assert "архив" in warning.lower()
