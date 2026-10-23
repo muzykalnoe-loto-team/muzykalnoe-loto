@@ -389,7 +389,8 @@ function renderEvent(doc) {
     link.href = data.files_url;
     link.target = "_blank";
     link.rel = "noopener";
-    link.append(el("small", null, "список, бланки, презентация — Яндекс Диск"));
+    const built = ["review", "approved"].includes(st.presentation);
+    link.append(el("small", null, (built ? "список, бланки, презентация" : "список песен") + " — Яндекс Диск"));
     body.append(link);
   }
   const noms = [

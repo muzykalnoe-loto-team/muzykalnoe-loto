@@ -25,8 +25,10 @@ description: Собрать игру «Музыкальное лото» по б
 2. Скилл `podobrat-pesni`: условия — тема брифа, песни по желанию — `wanted_songs`; правки —
    по `request.note` к прежнему списку (`selected_songs.json` в папке игры). Остановку «показать
    на утверждение» заменяет сайт: сразу сохрани `Список песен.xlsx` **и** `selected_songs.json`.
-3. На сайт одной записью: `songs_list` = `[{"n": 1, "song": "…", "kind": "video"|"old"}, …]`
-   (все 90), `stages.songs` = `review`, `request` удалить, `claude_note` — сколько исполнителей,
+3. Загрузи список на Яндекс Диск (в ту же папку, куда потом ляжет игра):
+   `url = upload_event(folder, ["Список песен.xlsx"])` (`from scripts.yandex_disk import upload_event`).
+4. На сайт одной записью: `songs_list` = `[{"n": 1, "song": "…", "kind": "video"|"old"}, …]`
+   (все 90), `files_url` = `url`, `stages.songs` = `review`, `request` удалить, `claude_note` — сколько исполнителей,
    что учтено, сомнения, «проверьте список и нажмите «Утвердить» или напишите правки».
 
 ### `build` — собрать игру
