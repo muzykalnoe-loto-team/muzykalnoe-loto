@@ -172,6 +172,15 @@ button.danger.solid { background: var(--accent); color: var(--accent-fg); border
 .songs summary { cursor: pointer; color: var(--fg); font-weight: 500; }
 .songs ol { margin: 6px 0 0; padding-left: 20px; }
 [hidden] { display: none !important; }
+.next { margin-top: 12px; padding: 12px; border-radius: 10px; border: 1px dashed var(--line); display: grid; gap: 10px; }
+.next p { margin: 0; font-size: 13.5px; }
+.next .wait { color: var(--wait); font-weight: 500; }
+.next .note { color: var(--muted); }
+.next textarea { width: 100%; min-height: 64px; font: inherit; font-size: 14px; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; resize: vertical; }
+.variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.variants figure { margin: 0; display: grid; gap: 6px; }
+.variants img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: #000; }
 fieldset.noms { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 14px; margin: 0; display: grid; gap: 12px; min-width: 0; }
 fieldset.noms legend { font-weight: 500; font-size: 14px; padding: 0 4px; }
 label.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
@@ -390,6 +399,17 @@ function renderEvent(doc) {
   if (data.themed_nomination || noms.some(Boolean)) {
     body.append(el("p", "meta", "Номинации: " + noms.map((n) => n || "авто").join(" · ")));
   }
+  if (Array.isArray(data.songs_list) && data.songs_list.length) {
+    const box = el("details", "songs");
+    box.append(el("summary", null, `Список песен: ${data.songs_list.length}`));
+    const ol = el("ol");
+    for (const row of data.songs_list) {
+      ol.append(el("li", null, row.kind === "old" ? `${row.song} — старый слайд` : row.song));
+    }
+    box.append(ol);
+    body.append(box);
+  }
+  body.append(nextStepBox(id, data));
   const songs = Array.isArray(data.wanted_songs) ? data.wanted_songs : [];
   if (songs.length) {
     const box = el("details", "songs");
@@ -470,6 +490,106 @@ function startEdit(id, data) {
   rerender();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
   f.theme.focus({ preventScroll: true });
+}
+
+// ---- Следующий шаг: кнопка на сайте ставит задание, Claude на компьютере оператора его забирает ----
+const STEP_NAMES = { songs: "подбор песен", build: "сборка игры" };
+
+async function requestStep(id, fields, btn, text) {
+  btn.disabled = true;
+  try {
+    await db.doc("events/" + id).update({
+      ...fields,
+      updated_at: new Date().toISOString(),
+    });
+    say(text, "ok");
+  } catch {
+    btn.disabled = false;
+    say("Не получилось отправить. Проверьте интернет и нажмите ещё раз.", "err");
+  }
+}
+
+function stepButton(id, label, step, text, extra) {
+  const b = el("button", "approve", label);
+  b.type = "button";
+  b.addEventListener("click", () => requestStep(id, {
+    request: { step, state: "waiting", at: new Date().toISOString(), ...(extra || {}) },
+  }, b, text));
+  return b;
+}
+
+function nextStepBox(id, data) {
+  const box = el("div", "next");
+  const st = data.stages || {};
+  const req = data.request;
+  if (typeof data.claude_note === "string" && data.claude_note) box.append(el("p", "note", "Claude: " + data.claude_note));
+  if (req && (req.state === "waiting" || req.state === "taken")) {
+    const what = STEP_NAMES[req.step] || "шаг";
+    box.append(el("p", "wait", req.state === "taken"
+      ? `Claude работает: ${what}…`
+      : `Ждёт Claude: ${what}. Начнётся в течение нескольких минут, если на компьютере открыт Claude с дежурством.`));
+    if (req.state === "waiting") {
+      const cancel = el("button", "ghost", "Отменить");
+      cancel.type = "button";
+      cancel.addEventListener("click", () => requestStep(id, { request: null }, cancel, "Задание отменено."));
+      box.append(cancel);
+    }
+    return box;
+  }
+  if (!st.songs || st.songs === "draft") {
+    box.append(el("p", null, "Следующий шаг — подобрать 90 песен по брифу."));
+    box.append(stepButton(id, "Подобрать песни", "songs", "Задание отправлено: Claude подберёт песни."));
+    return box;
+  }
+  if (st.songs === "review") {
+    box.append(el("p", null, "Проверьте список песен и нажмите «Утвердить» — или напишите, что заменить."));
+    const area = el("textarea");
+    area.placeholder = "Например: убрать «…», добавить больше 90-х";
+    area.setAttribute("aria-label", "Что заменить в списке");
+    const send = el("button", "ghost", "Отправить правки");
+    send.type = "button";
+    send.addEventListener("click", () => {
+      const note = area.value.trim();
+      if (!note) { area.focus(); return; }
+      requestStep(id, { request: { step: "songs", state: "waiting", at: new Date().toISOString(), note } },
+        send, "Правки отправлены: Claude обновит список.");
+    });
+    box.append(area, send);
+    return box;
+  }
+  if (st.songs === "approved" && (!st.presentation || st.presentation === "draft")) {
+    const variants = Array.isArray(data.theme_variants) ? data.theme_variants : [];
+    if (data.themed_nomination && variants.length && data.theme_choice == null) {
+      box.append(el("p", null, "Выберите тематический слайд номинации — после выбора Claude соберёт игру."));
+      const grid = el("div", "variants");
+      variants.forEach((v, i) => {
+        const fig = el("figure");
+        const img = el("img");
+        img.src = v.url;
+        img.alt = `Вариант ${i + 1}`;
+        const pick = el("button", "approve", `Выбрать вариант ${i + 1}`);
+        pick.type = "button";
+        pick.addEventListener("click", () => requestStep(id, {
+          theme_choice: i,
+          request: { step: "build", state: "waiting", at: new Date().toISOString() },
+        }, pick, `Выбран вариант ${i + 1}. Claude соберёт игру.`));
+        fig.append(img, pick);
+        grid.append(fig);
+      });
+      box.append(grid);
+      return box;
+    }
+    box.append(el("p", null, data.themed_nomination && !variants.length
+      ? "Следующий шаг — Claude нарисует два варианта тематического слайда, потом соберёт игру."
+      : "Следующий шаг — собрать бланки и презентацию и загрузить на Яндекс Диск (10–20 минут)."));
+    box.append(stepButton(id, "Собрать игру", "build", "Задание отправлено: Claude соберёт игру."));
+    return box;
+  }
+  if (st.blanks === "review" || st.presentation === "review") {
+    box.append(el("p", null, "Игра собрана. Скачайте файлы, проверьте и утвердите бланки и презентацию."));
+    return box;
+  }
+  return el("div");
 }
 
 async function approveStage(id, data, key, title, btn) {
