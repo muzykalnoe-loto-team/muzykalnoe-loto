@@ -24,3 +24,6 @@ OLD_BANK = f"{SOURCES}/Банк старых слайдов"
 OLD_CATALOG = f"{OLD_BANK}/каталог.json"
 COMMON_BANK_XLSX = f"{SOURCES}/Общий банк песен.xlsx"
 COMMON_BANK_JSON = f"{SOURCES}/Общий банк песен.json"
+
+# Исполнители, которых не берём в игры (ведёт оператор)
+STOP_LIST = "Стоп-лист исполнителей.xlsx"

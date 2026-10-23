@@ -12,6 +12,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts import paths  # noqa: E402
 from scripts.song_bank import load_song_bank  # noqa: E402
+from scripts.stop_list import blocked_artist, load_stop_list  # noqa: E402
 
 PLACEHOLDER = '<script id="songs-data" type="application/json">[]</script>'
 
@@ -22,6 +23,8 @@ def build(bank_path=paths.SONG_BANK, source="artifact/index.html", output="artif
             songs = [[e["raw"], 0 if e["video_file"] else 1] for e in json.load(f)]
     else:
         songs = [[s["raw"], 0] for s in load_song_bank(bank_path)]
+    stop = load_stop_list()  # исполнителей из стоп-листа в поиске «песен по желанию» нет
+    songs = [s for s in songs if not blocked_artist(s[0], stop)]
     with open(source, encoding="utf-8") as f:
         page = f.read()
     if PLACEHOLDER not in page:

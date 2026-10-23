@@ -23,6 +23,7 @@ description: Подобрать 90 песен из общего банка пе�
    - без повторов;
    - **не больше 3 песен одного исполнителя. Правило строгое**, без исключений, даже если тема узкая — в этом случае возьми больше разных исполнителей или сообщи, что песен под тему не хватает, и предложи расширить условия;
    - каждая песня есть в банке, строка `raw` записана в точности как в банке.
+   - **исполнителей из стоп-листа не брать** (и в дуэтах тоже): `from scripts.stop_list import load_stop_list, blocked_artist` → отбрось песни, где `blocked_artist(raw, stop)` не `None`. Файл `Стоп-лист исполнителей.xlsx` в корне ведёт оператор. Песня по желанию из стоп-листа — не бери и скажи оператору.
    - **Бочонки 3, 6, 9 … 90 (30 шт.) — песни со старым слайдом** (`old_file`), остальные 60 — с видео (`video_file`).
    - **Песня есть в обоих видах — решает популярность:** популярную (её и так знают наизусть) ставь старым слайдом на бочонок, кратный 3; малоизвестную — с видео. Для остальных песен вид не важен.
    - Песня по желанию только со старым слайдом — на бочонок, кратный 3; только с видео — на остальные.
@@ -38,7 +39,7 @@ description: Подобрать 90 песен из общего банка пе�
 from scripts.validate_selection import validate_selection
 from scripts.barrel_kinds import bank_index, check_kinds
 from collections import Counter
-result = validate_selection(selected, bank)   # ровно 90, без дублей, все в банке
+result = validate_selection(selected, bank, load_stop_list())   # ровно 90, без дублей, все в банке, без стоп-листа
 per_artist = Counter(artist_of[s] for s in selected)
 assert max(per_artist.values()) <= 3
 barrels = [{"number": i + 1, "song": s, "kind": k} for i, (s, k) in enumerate(zip(selected, kinds))]

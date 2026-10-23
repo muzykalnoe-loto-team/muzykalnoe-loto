@@ -173,3 +173,19 @@ def test_locked_archive_does_not_break_build(tmp_path, monkeypatch):
             app.Quit()
     assert os.path.exists(result["presentation_path"]) and "архив" in result["warning"].lower()
     assert result["nominations"][1] == "theme"
+
+
+def test_stop_list_song_is_rejected_before_office(tmp_path, monkeypatch):
+    from openpyxl import Workbook
+    with open(SELECTION, encoding="utf-8") as f:
+        artist = json.load(f)["barrels"][0]["song"].split(" - ")[0]
+    wb = Workbook()
+    wb.active.append(["Исполнитель", "Причина"])
+    wb.active.append([artist, "проверка"])
+    wb.save(tmp_path / "стоп.xlsx")
+    monkeypatch.setattr(paths, "STOP_LIST", str(tmp_path / "стоп.xlsx"))
+    selected = tmp_path / "selected_songs.json"
+    shutil.copy(SELECTION, selected)
+    with pytest.raises(ValueError, match="стоп-лист"):
+        run_pipeline(str(selected), n_individual=1, n_team=1, output_dir=str(tmp_path))
+    assert sorted(os.listdir(tmp_path)) == ["selected_songs.json", "стоп.xlsx"]

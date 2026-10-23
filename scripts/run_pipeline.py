@@ -8,6 +8,7 @@ from scripts.build_presentation import assemble_presentation
 from scripts.generate_blanks import generate_blanks
 from scripts.nominations import choose_nominations, load_history, record_game
 from scripts.song_bank import load_song_bank
+from scripts.stop_list import load_stop_list
 from scripts.validate_selection import validate_selection
 
 BLANKS_NAME = "Бланки.xlsm"
@@ -52,7 +53,7 @@ def run_pipeline(
 
     # Всё проверяем до запуска Excel и PowerPoint: сборка долгая, падать на середине обидно
     bank = _load_bank(song_bank)
-    check = validate_selection(songs_in_order, bank)
+    check = validate_selection(songs_in_order, bank, load_stop_list())
     if not check["ok"]:
         raise ValueError("Список песен не прошёл проверку: " + "; ".join(check["errors"]))
     if [b["number"] for b in barrels] != list(range(1, 91)):
