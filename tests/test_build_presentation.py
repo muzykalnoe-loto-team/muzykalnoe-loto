@@ -8,7 +8,7 @@ from scripts.build_presentation import assemble_presentation
 
 TEMPLATE = paths.PRESENTATION_TEMPLATE
 ARCHIVE = paths.SLIDES_ARCHIVE
-SELECTION = f"{paths.EVENTS}/пример/selected_songs.json"
+SELECTION = "tests/data/список — только видео.json"
 
 
 def _shape_names(prs, slide_number_1based):

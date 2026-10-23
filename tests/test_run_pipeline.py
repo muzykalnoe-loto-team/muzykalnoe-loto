@@ -11,7 +11,7 @@ from scripts.export_selection import export_selection
 from scripts.run_pipeline import run_pipeline
 
 # 60 видео и 30 старых слайдов (бочонки 3, 6 … 90)
-SELECTION = f"{paths.EVENTS}/пример/selected_songs — смешанный.json"
+SELECTION = "tests/data/список — смешанный.json"
 
 
 @pytest.mark.integration
@@ -60,7 +60,7 @@ def _common_bank():
 
 def test_all_video_list_is_rejected_before_office(tmp_path):
     selected_path = tmp_path / "selected_songs.json"
-    shutil.copy(f"{paths.EVENTS}/пример/selected_songs.json", selected_path)  # старый пример: 90 видео
+    shutil.copy("tests/data/список — только видео.json", selected_path)  # старый пример: 90 видео
     with pytest.raises(ValueError, match="Бочонок 3"):
         run_pipeline(str(selected_path), n_individual=1, n_team=1, output_dir=str(tmp_path))
     assert os.listdir(tmp_path) == ["selected_songs.json"]

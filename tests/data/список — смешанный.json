@@ -1,0 +1,454 @@
+{
+  "barrels": [
+    {
+      "number": 1,
+      "song": "Миша Марвин - Не надо быть сильной",
+      "kind": "video"
+    },
+    {
+      "number": 2,
+      "song": "НА-НА - Фаина",
+      "kind": "video"
+    },
+    {
+      "number": 3,
+      "song": "Комбинация - Russian Girls",
+      "kind": "old"
+    },
+    {
+      "number": 4,
+      "song": "Три дня дождя - Отпускай",
+      "kind": "video"
+    },
+    {
+      "number": 5,
+      "song": "Дима Билан - На берегу неба",
+      "kind": "video"
+    },
+    {
+      "number": 6,
+      "song": "Антоха МС - ЖАРА",
+      "kind": "old"
+    },
+    {
+      "number": 7,
+      "song": "Artik & Asti - Под гипнозом",
+      "kind": "video"
+    },
+    {
+      "number": 8,
+      "song": "Стас Костюшкин - Вот-вот Новый год",
+      "kind": "video"
+    },
+    {
+      "number": 9,
+      "song": "Алёна Швец - Вино и сигареты",
+      "kind": "old"
+    },
+    {
+      "number": 10,
+      "song": "Михаил Шуфутинский - 3-е Сентября",
+      "kind": "video"
+    },
+    {
+      "number": 11,
+      "song": "Анжелика Варум - Зимняя вишня",
+      "kind": "video"
+    },
+    {
+      "number": 12,
+      "song": "Наталья Подольская - Такая сильная любовь",
+      "kind": "old"
+    },
+    {
+      "number": 13,
+      "song": "Олег Газманов - Офицеры",
+      "kind": "video"
+    },
+    {
+      "number": 14,
+      "song": "Дискотека Авария - Некуда деваться",
+      "kind": "video"
+    },
+    {
+      "number": 15,
+      "song": "IOWA - Бьёт бит",
+      "kind": "old"
+    },
+    {
+      "number": 16,
+      "song": "Валерий Меладзе - Свет уходящего солнца",
+      "kind": "video"
+    },
+    {
+      "number": 17,
+      "song": "ALEKS ATAMAN - Снежинки",
+      "kind": "video"
+    },
+    {
+      "number": 18,
+      "song": "Nyusha - Вою на луну",
+      "kind": "old"
+    },
+    {
+      "number": 19,
+      "song": "Ранетки - О тебе",
+      "kind": "video"
+    },
+    {
+      "number": 20,
+      "song": "Игорь Николаев - Малиновое вино",
+      "kind": "video"
+    },
+    {
+      "number": 21,
+      "song": "КИНО - Перемен",
+      "kind": "old"
+    },
+    {
+      "number": 22,
+      "song": "Варвара - Летала да пела",
+      "kind": "video"
+    },
+    {
+      "number": 23,
+      "song": "Сергей Лазарев - Так красиво",
+      "kind": "video"
+    },
+    {
+      "number": 24,
+      "song": "Любэ - Солдат",
+      "kind": "old"
+    },
+    {
+      "number": 25,
+      "song": "Слава - Одиночество",
+      "kind": "video"
+    },
+    {
+      "number": 26,
+      "song": "Иванушки International - Билетик в кино",
+      "kind": "video"
+    },
+    {
+      "number": 27,
+      "song": "Сергей Трофимов - Ветер в голове",
+      "kind": "old"
+    },
+    {
+      "number": 28,
+      "song": "Ёлка - На большом воздушном шаре",
+      "kind": "video"
+    },
+    {
+      "number": 29,
+      "song": "Бьянка - А чё чё",
+      "kind": "video"
+    },
+    {
+      "number": 30,
+      "song": "Машина Времени - Марионетки",
+      "kind": "old"
+    },
+    {
+      "number": 31,
+      "song": "Ансамбль Весёлые ребята - Розовые розы",
+      "kind": "video"
+    },
+    {
+      "number": 32,
+      "song": "Ранетки - Сердце не спит",
+      "kind": "video"
+    },
+    {
+      "number": 33,
+      "song": "Валентина Легкоступова - Ягода-малина",
+      "kind": "old"
+    },
+    {
+      "number": 34,
+      "song": "Алсу - Иногда",
+      "kind": "video"
+    },
+    {
+      "number": 35,
+      "song": "Дмитрий Маликов - С чистого листа",
+      "kind": "video"
+    },
+    {
+      "number": 36,
+      "song": "SEREBRO - Скажи, не молчи",
+      "kind": "old"
+    },
+    {
+      "number": 37,
+      "song": "Иракли - Я с тобой",
+      "kind": "video"
+    },
+    {
+      "number": 38,
+      "song": "Андрей Губин - Лиза",
+      "kind": "video"
+    },
+    {
+      "number": 39,
+      "song": "БАНД'ЭРОС - Ч-Б",
+      "kind": "old"
+    },
+    {
+      "number": 40,
+      "song": "Леонид Агутин - Аэропорты",
+      "kind": "video"
+    },
+    {
+      "number": 41,
+      "song": "Иванушки International - Беги, беги",
+      "kind": "video"
+    },
+    {
+      "number": 42,
+      "song": "PHARAOH - Дико, например",
+      "kind": "old"
+    },
+    {
+      "number": 43,
+      "song": "Комбинация - American Boy",
+      "kind": "video"
+    },
+    {
+      "number": 44,
+      "song": "ВИА ГРА - У меня появился другой",
+      "kind": "video"
+    },
+    {
+      "number": 45,
+      "song": "ЕГОР КРИД - PUSSY BOY",
+      "kind": "old"
+    },
+    {
+      "number": 46,
+      "song": "Андрей Губин - Облака",
+      "kind": "video"
+    },
+    {
+      "number": 47,
+      "song": "Григорий Лепс - На гондоле",
+      "kind": "video"
+    },
+    {
+      "number": 48,
+      "song": "Moй бой - Shaman",
+      "kind": "old"
+    },
+    {
+      "number": 49,
+      "song": "ХАННА - От зари до зари",
+      "kind": "video"
+    },
+    {
+      "number": 50,
+      "song": "Валерий Меладзе - Сэра",
+      "kind": "video"
+    },
+    {
+      "number": 51,
+      "song": "Galibri & Mavik - Стивен Сигал",
+      "kind": "old"
+    },
+    {
+      "number": 52,
+      "song": "INSTASAMKA - КАК MOMMY",
+      "kind": "video"
+    },
+    {
+      "number": 53,
+      "song": "Форум - Белая ночь",
+      "kind": "video"
+    },
+    {
+      "number": 54,
+      "song": "НЭНСИ - Ива",
+      "kind": "old"
+    },
+    {
+      "number": 55,
+      "song": "Руки Вверх! - Лишь о тебе мечтая",
+      "kind": "video"
+    },
+    {
+      "number": 56,
+      "song": "Звери - Танцуй",
+      "kind": "video"
+    },
+    {
+      "number": 57,
+      "song": "ВИА ГРА, Вахтанг - У меня появился другой",
+      "kind": "old"
+    },
+    {
+      "number": 58,
+      "song": "Александр Добрынин - Розовые розы",
+      "kind": "video"
+    },
+    {
+      "number": 59,
+      "song": "Непара - Бог тебя выдумал",
+      "kind": "video"
+    },
+    {
+      "number": 60,
+      "song": "FEDUK - Закрывай глаза",
+      "kind": "old"
+    },
+    {
+      "number": 61,
+      "song": "Ольга Бузова - Wi-Fi",
+      "kind": "video"
+    },
+    {
+      "number": 62,
+      "song": "Винтаж - Одиночество любви",
+      "kind": "video"
+    },
+    {
+      "number": 63,
+      "song": "ФОГЕЛЬ - МАЛЬЧИК",
+      "kind": "old"
+    },
+    {
+      "number": 64,
+      "song": "Демо - 2000 Лет",
+      "kind": "video"
+    },
+    {
+      "number": 65,
+      "song": "Интонация - Ты и я",
+      "kind": "video"
+    },
+    {
+      "number": 66,
+      "song": "КИНО - Группа крови",
+      "kind": "old"
+    },
+    {
+      "number": 67,
+      "song": "Город 312 - Девочка, которая хотела счастья",
+      "kind": "video"
+    },
+    {
+      "number": 68,
+      "song": "Сектор Газа - Лирика",
+      "kind": "video"
+    },
+    {
+      "number": 69,
+      "song": "Скриптонит - Положение",
+      "kind": "old"
+    },
+    {
+      "number": 70,
+      "song": "Валерий Меладзе - Красиво",
+      "kind": "video"
+    },
+    {
+      "number": 71,
+      "song": "Григорий Лепс - Я поднимаю руки",
+      "kind": "video"
+    },
+    {
+      "number": 72,
+      "song": "Andy Panda - King Kong",
+      "kind": "old"
+    },
+    {
+      "number": 73,
+      "song": "Егор Крид - Девочка с картинки",
+      "kind": "video"
+    },
+    {
+      "number": 74,
+      "song": "Надежда Кадышева - Я не колдунья",
+      "kind": "video"
+    },
+    {
+      "number": 75,
+      "song": "Иванушки International - Тополиный пух",
+      "kind": "old"
+    },
+    {
+      "number": 76,
+      "song": "Фабрика - Мы такие разные",
+      "kind": "video"
+    },
+    {
+      "number": 77,
+      "song": "Kristina Si - Хочу",
+      "kind": "video"
+    },
+    {
+      "number": 78,
+      "song": "Скриптонит, 104 - Цепи",
+      "kind": "old"
+    },
+    {
+      "number": 79,
+      "song": "Лариса Долина - Три белых коня",
+      "kind": "video"
+    },
+    {
+      "number": 80,
+      "song": "Валерия - Таю",
+      "kind": "video"
+    },
+    {
+      "number": 81,
+      "song": "Непара - Плачь и смотри",
+      "kind": "old"
+    },
+    {
+      "number": 82,
+      "song": "Валерий Меладзе - Магдалина",
+      "kind": "video"
+    },
+    {
+      "number": 83,
+      "song": "Валерия - Нежность моя",
+      "kind": "video"
+    },
+    {
+      "number": 84,
+      "song": "Елена Терлеева - Люби меня",
+      "kind": "old"
+    },
+    {
+      "number": 85,
+      "song": "Дмитрий Колдун - Корабли",
+      "kind": "video"
+    },
+    {
+      "number": 86,
+      "song": "Стас Михайлов - Журавли летят в Китай",
+      "kind": "video"
+    },
+    {
+      "number": 87,
+      "song": "Miyagi & Andy Panda - Там ревели горы",
+      "kind": "old"
+    },
+    {
+      "number": 88,
+      "song": "Жанна Фриске, Дискотека Авария - Малинки",
+      "kind": "video"
+    },
+    {
+      "number": 89,
+      "song": "Стас Михайлов - Ну, вот и всё",
+      "kind": "video"
+    },
+    {
+      "number": 90,
+      "song": "Игорь Николаев - Выпьем за любовь",
+      "kind": "old"
+    }
+  ]
+}
