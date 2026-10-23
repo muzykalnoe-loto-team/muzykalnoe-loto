@@ -68,12 +68,12 @@ form {
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 label { font-weight: 500; font-size: 14px; }
 .hint { color: var(--muted); font-size: 12.5px; }
-input {
+input, select {
   width: 100%; min-width: 0; font: inherit; color: var(--fg);
   background: var(--bg); border: 1px solid var(--line); border-radius: 9px;
   padding: 10px 12px;
 }
-input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 input[aria-invalid="true"] { border-color: var(--accent); }
 button {
   font: 600 15px/1 var(--font-body); cursor: pointer;
@@ -171,6 +171,11 @@ button.danger.solid { background: var(--accent); color: var(--accent-fg); border
 .songs { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); }
 .songs summary { cursor: pointer; color: var(--fg); font-weight: 500; }
 .songs ol { margin: 6px 0 0; padding-left: 20px; }
+[hidden] { display: none !important; }
+fieldset.noms { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 14px; margin: 0; display: grid; gap: 12px; min-width: 0; }
+fieldset.noms legend { font-weight: 500; font-size: 14px; padding: 0 4px; }
+label.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+label.check input { width: 18px; height: 18px; flex: none; margin: 1px 0 0; accent-color: var(--accent); padding: 0; }
 
 @media (max-width: 420px) { .row { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: no-preference) { .event { animation: in .25s ease-out; } }
@@ -230,6 +235,39 @@ button.danger.solid { background: var(--accent); color: var(--accent-fg); border
           <span class="hint" id="song-hint">Наберите исполнителя или название и выберите одну или несколько песен — они обязательно войдут в 90.</span>
           <ul id="wanted" class="wanted" aria-label="Выбранные песни"></ul>
         </div>
+        <fieldset class="noms">
+          <legend>Номинации</legend>
+          <label class="check">
+            <input id="themed_nomination" name="themed_nomination" type="checkbox" data-optional>
+            <span>Тематический слайд для номинации
+              <span class="hint" style="display:block">В 1-м раунде — слайд, нарисованный под тему. Claude пришлёт два варианта на выбор.</span></span>
+          </label>
+          <div class="field" id="nom1-field">
+            <label for="nomination_1">Номинация 1 раунда</label>
+            <select id="nomination_1" name="nomination_1">
+              <option value="auto">Авто (по очереди)</option>
+              <option value="sing">Щас спою!</option>
+              <option value="cry">Крик души</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nomination_2">Номинация 2 раунда</label>
+            <select id="nomination_2" name="nomination_2">
+              <option value="auto">Авто (по очереди)</option>
+              <option value="goddess">Синяя богиня</option>
+              <option value="cherry">Пьяная вишня</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nomination_3">Номинация 3 раунда</label>
+            <select id="nomination_3" name="nomination_3">
+              <option value="auto">Авто (по очереди)</option>
+              <option value="dancefloor">Танцпол в огне</option>
+              <option value="nobrakes">Мы без тормозов</option>
+            </select>
+          </div>
+          <span class="hint">«Авто» — не та, что была в прошлой игре.</span>
+        </fieldset>
         <div class="form-actions">
           <button id="submit" type="submit">Отправить бриф</button>
           <button id="cancel-edit" type="button" class="ghost" hidden>Отменить</button>
@@ -271,6 +309,21 @@ const msg = document.getElementById("msg");
 const submitBtn = document.getElementById("submit");
 const list = document.getElementById("list");
 const formTitle = document.getElementById("form-title");
+
+// ---- Номинации: при тематическом слайде 1-й раунд выбирать не нужно ----
+const NOM_NAMES = {
+  sing: "Щас спою!", cry: "Крик души", goddess: "Синяя богиня",
+  cherry: "Пьяная вишня", dancefloor: "Танцпол в огне", nobrakes: "Мы без тормозов",
+};
+function setSelect(select, value) {
+  select.value = [...select.options].some((o) => o.value === value) ? value : "auto";
+}
+function syncNominations() {
+  document.getElementById("nom1-field").hidden = form.elements.themed_nomination.checked;
+}
+form.elements.themed_nomination.addEventListener("change", syncNominations);
+syncNominations();
+
 const cancelBtn = document.getElementById("cancel-edit");
 let db = null;
 let docs = [];              // последние мероприятия из базы
@@ -330,6 +383,13 @@ function renderEvent(doc) {
     link.append(el("small", null, "список, бланки, презентация — Яндекс Диск"));
     body.append(link);
   }
+  const noms = [
+    data.themed_nomination ? "тематическая" : NOM_NAMES[data.nomination_1],
+    NOM_NAMES[data.nomination_2], NOM_NAMES[data.nomination_3],
+  ];
+  if (data.themed_nomination || noms.some(Boolean)) {
+    body.append(el("p", "meta", "Номинации: " + noms.map((n) => n || "авто").join(" · ")));
+  }
   const songs = Array.isArray(data.wanted_songs) ? data.wanted_songs : [];
   if (songs.length) {
     const box = el("details", "songs");
@@ -381,6 +441,7 @@ function resetForm() {
   for (const input of form.querySelectorAll("input")) input.removeAttribute("aria-invalid");
   wanted.length = 0;
   renderWanted();
+  syncNominations();
   formTitle.textContent = "Новый бриф";
   submitBtn.textContent = "Отправить бриф";
   cancelBtn.hidden = true;
@@ -399,6 +460,9 @@ function startEdit(id, data) {
   if (data.n_team != null) f.n_team.value = data.n_team;
   wanted.push(...(Array.isArray(data.wanted_songs) ? data.wanted_songs : []));
   renderWanted();
+  f.themed_nomination.checked = data.themed_nomination === true;
+  for (const n of [1, 2, 3]) setSelect(f["nomination_" + n], data["nomination_" + n]);
+  syncNominations();
   formTitle.textContent = `Изменить: ${data.theme || "мероприятие"}`;
   submitBtn.textContent = "Сохранить изменения";
   cancelBtn.hidden = false;
@@ -500,6 +564,10 @@ function readForm() {
     n_individual: +f.n_individual.value,
     n_team: +f.n_team.value,
     wanted_songs: [...wanted],
+    themed_nomination: f.themed_nomination.checked,
+    nomination_1: f.themed_nomination.checked ? "auto" : f.nomination_1.value,
+    nomination_2: f.nomination_2.value,
+    nomination_3: f.nomination_3.value,
   };
 }
 
