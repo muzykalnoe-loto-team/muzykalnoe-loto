@@ -835,6 +835,8 @@ search.addEventListener("keydown", (e) => {
     list.replaceChildren(notice("Список недоступен", "Откройте панель в Claude под своим аккаунтом — здесь появятся мероприятия и их стадии."));
     return;
   }
+  // картинки вариантов (ассеты) показываются, когда страница подключила хранилище файлов
+  window.claude?.use?.("assets").then(() => rerender()).catch(() => {});
   db.collection("events").orderBy("date").onSnapshot(renderList, () => {
     list.replaceChildren(notice("Список не загрузился", "Обновите страницу через минуту."));
   });
