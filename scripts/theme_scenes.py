@@ -226,6 +226,124 @@ def ussr(rnd):
     return defs, out
 
 
+# ---------- Гэтсби, вариант «шампанская башня»: пирамида бокалов, жемчуг, золотой веер ----------
+def gatsby_tower(rnd):
+    defs, out = [GLOW.format(s=7), SOFT.format(s=10)], []
+    g, r = bg_glow("#F2C46D", 0.8, 0.7, 0.6, 0.45)
+    defs.append(g); out.append(r)
+    defs.append('<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF4C9"/>'
+                '<stop offset="0.5" stop-color="#F2C46D"/><stop offset="1" stop-color="#A9771F"/></linearGradient>'
+                '<linearGradient id="fizz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF6D6" stop-opacity="0.95"/>'
+                '<stop offset="1" stop-color="#E9B44C" stop-opacity="0.85"/></linearGradient>')
+    cx, base = 1580, 1040
+    # веер-лучи ар-деко за башней
+    rays = []
+    for i in range(25):
+        a = math.radians(195 + i * 6.25)
+        rays.append(f'<line x1="{cx}" y1="{base}" x2="{cx + 760 * math.cos(a):.0f}" y2="{base + 760 * math.sin(a):.0f}" '
+                    f'stroke-width="{2 if i % 2 else 5}"/>')
+    out.append(f'<g stroke="url(#gold)" opacity="0.35">{"".join(rays)}</g>')
+    for rr in (520, 640):
+        out.append(f'<path d="M{cx - rr} {base} A{rr} {rr} 0 0 1 {cx + rr} {base}" fill="none" stroke="url(#gold)" '
+                   f'stroke-width="3" opacity="0.5"/>')
+    # пирамида бокалов-шампанок: 4 ряда
+    gw, gh = 118, 150
+    glasses = []
+    for row, count in enumerate((4, 3, 2, 1)):
+        y = base - 30 - row * gh
+        for k in range(count):
+            x = cx + (k - (count - 1) / 2) * (gw + 14)
+            glasses.append(
+                f'<path d="M{x - gw / 2} {y - gh + 40} Q{x} {y - gh + 120} {x + gw / 2} {y - gh + 40} Z" fill="url(#fizz)"/>'
+                f'<path d="M{x - gw / 2} {y - gh + 40} Q{x} {y - gh + 120} {x + gw / 2} {y - gh + 40}" fill="none" '
+                f'stroke="#FFF4C9" stroke-width="4"/>'
+                f'<rect x="{x - 4}" y="{y - gh + 96}" width="8" height="{gh - 110}" fill="url(#gold)"/>'
+                f'<ellipse cx="{x}" cy="{y - 12}" rx="38" ry="8" fill="url(#gold)"/>')
+    out.append(f'<g filter="url(#glow)">{"".join(glasses)}</g>')
+    # струя из бутылки в верхний бокал
+    top = base - 30 - 3 * gh - gh + 40
+    out.append(f'<path d="M{cx + 170} {top - 230} Q{cx + 40} {top - 170} {cx + 6} {top + 10}" stroke="#FFF1B8" '
+               f'stroke-width="9" fill="none" stroke-linecap="round" filter="url(#glow)" opacity="0.9"/>')
+    out.append(f'<g transform="translate({cx + 205} {top - 265}) rotate(-125)">'
+               '<rect x="-34" y="-20" width="68" height="190" rx="26" fill="#1F3B2C" stroke="url(#gold)" stroke-width="4"/>'
+               '<rect x="-14" y="-90" width="28" height="80" rx="8" fill="#1F3B2C" stroke="url(#gold)" stroke-width="4"/>'
+               '<rect x="-34" y="40" width="68" height="60" fill="url(#gold)"/></g>')
+    # жемчужные нити дугами по верху
+    for x0, x1, sag in ((1180, 1660, 150), (1560, 1940, 120), (1300, 1900, 260)):
+        mx = (x0 + x1) / 2
+        beads = []
+        for i in range(1, 30):
+            t = i / 30
+            px = (1 - t) ** 2 * x0 + 2 * (1 - t) * t * mx + t ** 2 * x1
+            py = 2 * (1 - t) * t * (sag * 2) - 10
+            beads.append(f'<circle cx="{px:.0f}" cy="{py:.0f}" r="8"/>')
+        out.append(f'<g fill="#FFF7E6" opacity="0.92">{"".join(beads)}</g>')
+    for _ in range(40):
+        bx, by = cx + rnd.randint(-260, 260), rnd.randint(260, 1000)
+        out.append(f'<circle cx="{bx}" cy="{by}" r="{rnd.randint(3, 9)}" fill="none" stroke="#FFF4C9" stroke-width="2" '
+                   f'opacity="{rnd.uniform(0.4, 0.9):.2f}"/>')
+    for _ in range(12):
+        out.append(sparkle(rnd.randint(1200, 1900), rnd.randint(150, 950), rnd.randint(12, 26), "#FFF4C9", 0.95))
+    return defs, out
+
+
+# ---------- Гэтсби, вариант «изумрудный Нью-Йорк»: небоскрёбы ар-деко, салют, зелёный огонёк ----------
+def gatsby_skyline(rnd):
+    defs, out = [GLOW.format(s=10), SOFT.format(s=16)], []
+    g, r = bg_glow("#2BD9A0", 0.8, 0.55, 0.62, 0.42)
+    defs.append(g); out.append(r)
+    defs.append('<linearGradient id="emer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7DFFD2"/>'
+                '<stop offset="1" stop-color="#127A5C"/></linearGradient>')
+    # салют
+    for fx, fy, fr, c in ((1450, 230, 150, "#7DFFD2"), (1780, 160, 120, "#F2C46D"), (1650, 360, 90, "#FFFFFF")):
+        lines = []
+        for k in range(28):
+            a = math.radians(k * 360 / 28)
+            lines.append(f'<line x1="{fx + fr * 0.25 * math.cos(a):.0f}" y1="{fy + fr * 0.25 * math.sin(a):.0f}" '
+                         f'x2="{fx + fr * math.cos(a):.0f}" y2="{fy + fr * math.sin(a):.0f}"/>')
+        out.append(f'<g stroke="{c}" stroke-width="4" stroke-linecap="round" filter="url(#glow)" opacity="0.9">{"".join(lines)}</g>')
+    # небоскрёбы ар-деко
+    horizon = 860
+    towers = [(1190, 520, 90), (1290, 380, 120), (1430, 250, 110), (1560, 430, 100), (1680, 300, 130), (1830, 470, 110)]
+    parts, windows = [], []
+    for x, top, w in towers:
+        parts.append(f'<rect x="{x - w / 2}" y="{top}" width="{w}" height="{horizon - top}"/>')
+        for step in range(3):  # ступенчатая верхушка
+            sw, sh = w * (0.75 - step * 0.22), 34
+            parts.append(f'<rect x="{x - sw / 2}" y="{top - sh * (step + 1)}" width="{sw}" height="{sh}"/>')
+        parts.append(f'<path d="M{x - 6} {top - 102} L{x} {top - 190} L{x + 6} {top - 102} Z"/>')
+        for wy in range(top + 24, horizon - 20, 34):
+            for wx in range(int(x - w / 2 + 14), int(x + w / 2 - 14), 22):
+                if rnd.random() < 0.45:
+                    windows.append(f'<rect x="{wx}" y="{wy}" width="9" height="14"/>')
+    # шпиль в стиле Крайслер-билдинг
+    cxs, ct = 1430, 250
+    for k in range(5):
+        rr = 60 - k * 11
+        parts.append(f'<path d="M{cxs - rr} {ct - 102 - k * 26} A{rr} {rr} 0 0 1 {cxs + rr} {ct - 102 - k * 26}" '
+                     f'stroke="#F2C46D" stroke-width="5" fill="none"/>')
+    out.append(f'<g fill="#07130F">{"".join(parts)}</g>')
+    out.append(f'<g fill="#F2C46D" opacity="0.85">{"".join(windows)}</g>')
+    # вода, отражение и зелёный огонёк на причале
+    out.append(f'<rect x="1100" y="{horizon}" width="{W - 1100}" height="{H - horizon}" fill="#062019" opacity="0.85"/>')
+    for k in range(9):
+        y = horizon + 18 + k * 22
+        out.append(f'<line x1="{1150 + rnd.randint(0, 120)}" y1="{y}" x2="{1900 - rnd.randint(0, 160)}" y2="{y}" '
+                   f'stroke="#2BD9A0" stroke-width="2" opacity="{0.35 - k * 0.03:.2f}"/>')
+    dx, dy = 1760, 960
+    out.append(f'<rect x="{dx - 6}" y="{dy - 70}" width="12" height="90" fill="#0C2A21"/>')
+    out.append(f'<circle cx="{dx}" cy="{dy - 78}" r="60" fill="#2BD9A0" opacity="0.35" filter="url(#soft)"/>')
+    out.append(f'<circle cx="{dx}" cy="{dy - 78}" r="16" fill="#AFFFE6" filter="url(#glow)"/>')
+    out.append(f'<path d="M{dx - 12} {dy - 60} L{dx - 300} {H} L{dx + 300} {H} L{dx + 12} {dy - 60} Z" fill="url(#emer)" '
+               f'opacity="0.12" filter="url(#soft)"/>')
+    for _ in range(80):
+        out.append(f'<circle cx="{rnd.randint(1150, 1910)}" cy="{rnd.randint(20, 600)}" r="{rnd.choice((1, 2, 2, 3))}" '
+                   f'fill="#FFFFFF" opacity="{rnd.uniform(0.3, 0.9):.2f}"/>')
+    for _ in range(7):
+        out.append(sparkle(rnd.randint(1200, 1900), rnd.randint(80, 650), rnd.randint(10, 20), "#AFFFE6", 0.9))
+    return defs, out
+
+
 THEMES = {
     "newyear": {"name": "Новогодняя", "title": "НАРЯДНЫЕ,КАК ЁЛКИ", "glow": "#3FA9FF", "scene": newyear},
     "gothic": {"name": "Готический бал", "title": "ТЬМА ВАМК ЛИЦУ", "glow": "#8A3DFF", "scene": gothic},
