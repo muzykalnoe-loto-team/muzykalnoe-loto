@@ -344,6 +344,89 @@ def gatsby_skyline(rnd):
     return defs, out
 
 
+# ---------- Рок, вариант «гитара»: электрогитара, молния, пламя ----------
+def rock_guitar(rnd):
+    defs, out = [GLOW.format(s=9), SOFT.format(s=12)], []
+    g, r = bg_glow("#FF3B30", 0.8, 0.6, 0.6, 0.5)
+    defs.append(g); out.append(r)
+    defs.append('<linearGradient id="flame" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF2A00"/>'
+                '<stop offset="0.6" stop-color="#FF8A00"/><stop offset="1" stop-color="#FFE14D" stop-opacity="0"/></linearGradient>'
+                '<linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF6B5E"/>'
+                '<stop offset="1" stop-color="#8E0F0A"/></linearGradient>')
+    # молния за гитарой
+    out.append('<path d="M1700 40 L1560 380 L1660 380 L1520 700 L1780 300 L1670 300 L1800 40 Z" fill="#FFE14D" '
+               'opacity="0.9" filter="url(#glow)"/>')
+    # пламя снизу
+    for k in range(16):
+        x = 1120 + k * 52 + rnd.randint(-10, 10)
+        h = rnd.randint(150, 330)
+        out.append(f'<path d="M{x - 40} 1080 Q{x - 30} {1080 - h * 0.5} {x + rnd.randint(-15, 15)} {1080 - h} '
+                   f'Q{x + 30} {1080 - h * 0.5} {x + 40} 1080 Z" fill="url(#flame)" opacity="0.85" filter="url(#soft)"/>')
+    # гитара (Flying V), наклонена
+    gtr = ('<path d="M0 0 L-150 330 L-70 330 L0 160 L70 330 L150 330 Z" fill="url(#body)" stroke="#FFD2CC" stroke-width="6"/>'
+           '<rect x="-14" y="-470" width="28" height="520" fill="#2B1A12" stroke="#E8B64C" stroke-width="3"/>'
+           '<path d="M-26 -560 L26 -560 L18 -470 L-18 -470 Z" fill="#1A0F0A" stroke="#E8B64C" stroke-width="3"/>')
+    for k in range(1, 14):
+        gtr += f'<line x1="-14" y1="{-470 + k * 34}" x2="14" y2="{-470 + k * 34}" stroke="#C9C9C9" stroke-width="2"/>'
+    for k in range(-2, 3):
+        gtr += f'<line x1="{k * 5}" y1="-555" x2="{k * 5}" y2="250" stroke="#EDEDED" stroke-width="1.5"/>'
+    gtr += ('<rect x="-40" y="70" width="80" height="26" rx="6" fill="#111"/>'
+            '<rect x="-40" y="130" width="80" height="26" rx="6" fill="#111"/>'
+            '<circle cx="90" cy="260" r="14" fill="#E8B64C"/><circle cx="-90" cy="260" r="14" fill="#E8B64C"/>')
+    out.append(f'<g transform="translate(1570 640) rotate(28)" filter="url(#glow)">{gtr}</g>')
+    # искры
+    for _ in range(40):
+        out.append(f'<circle cx="{rnd.randint(1150, 1910)}" cy="{rnd.randint(500, 1060)}" r="{rnd.choice((2, 3, 4))}" '
+                   f'fill="#FFD27A" opacity="{rnd.uniform(0.5, 1):.2f}"/>')
+    for _ in range(8):
+        out.append(sparkle(rnd.randint(1200, 1900), rnd.randint(100, 900), rnd.randint(12, 24), "#FFE9C2", 0.95))
+    return defs, out
+
+
+# ---------- Рок, вариант «сцена»: прожекторы, колонки, микрофон, руки с «козой» ----------
+HORNS = ("M-38 0 L-38 -70 Q-38 -90 -26 -90 Q-14 -90 -14 -70 L-14 -30 L14 -30 L14 -110 Q14 -128 26 -128 "
+         "Q38 -128 38 -110 L38 0 Q38 60 0 70 Q-38 60 -38 0 Z")
+
+
+def rock_stage(rnd):
+    defs, out = [GLOW.format(s=10), SOFT.format(s=18)], []
+    g, r = bg_glow("#4D7CFF", 0.8, 0.45, 0.62, 0.5)
+    defs.append(g); out.append(r)
+    defs.append('<linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD0FF" stop-opacity="0.75"/>'
+                '<stop offset="1" stop-color="#4D7CFF" stop-opacity="0"/></linearGradient>')
+    # лучи прожекторов
+    for x, ang in ((1330, 14), (1520, 4), (1700, -8), (1880, -18)):
+        bx = x + 1000 * math.tan(math.radians(-ang))
+        out.append(f'<path d="M{x - 18} 0 L{x + 18} 0 L{bx + 170:.0f} 1000 L{bx - 170:.0f} 1000 Z" fill="url(#beam)" '
+                   f'filter="url(#soft)"/>')
+        out.append(f'<rect x="{x - 30}" y="0" width="60" height="34" rx="6" fill="#151A2E" stroke="#BFD0FF" stroke-width="3"/>')
+    # колонки
+    for x in (1340, 1810):
+        out.append(f'<rect x="{x - 90}" y="560" width="180" height="420" rx="10" fill="#0D1020" stroke="#4D7CFF" stroke-width="4"/>')
+        for cy, rr in ((660, 62), (830, 78)):
+            out.append(f'<circle cx="{x}" cy="{cy}" r="{rr}" fill="#1B2240" stroke="#BFD0FF" stroke-width="4"/>'
+                       f'<circle cx="{x}" cy="{cy}" r="{rr * 0.35:.0f}" fill="#4D7CFF" filter="url(#glow)"/>')
+    # стойка микрофона
+    out.append('<line x1="1575" y1="980" x2="1575" y2="520" stroke="#D6DCF5" stroke-width="10"/>'
+               '<line x1="1575" y1="980" x2="1495" y2="1060" stroke="#D6DCF5" stroke-width="8"/>'
+               '<line x1="1575" y1="980" x2="1655" y2="1060" stroke="#D6DCF5" stroke-width="8"/>'
+               '<rect x="1557" y="440" width="36" height="90" rx="18" fill="#2A2F45" stroke="#FFFFFF" stroke-width="4" '
+               'filter="url(#glow)"/>')
+    # руки зала с «козой»
+    for k in range(9):
+        x = 1270 + k * 80 + rnd.randint(-15, 15)
+        y = 1010 + rnd.randint(-30, 20)
+        out.append(f'<path d="{HORNS}" fill="#05070F" transform="translate({x} {y}) rotate({rnd.randint(-15, 15)}) '
+                   f'scale({rnd.uniform(0.9, 1.25):.2f})"/>')
+    out.append('<rect x="1230" y="1040" width="690" height="40" fill="#05070F"/>')
+    for _ in range(60):
+        out.append(f'<circle cx="{rnd.randint(1150, 1910)}" cy="{rnd.randint(40, 600)}" r="{rnd.choice((1, 2, 3))}" '
+                   f'fill="#FFFFFF" opacity="{rnd.uniform(0.3, 0.9):.2f}"/>')
+    for _ in range(7):
+        out.append(sparkle(rnd.randint(1200, 1900), rnd.randint(80, 520), rnd.randint(12, 22), "#DCE6FF", 0.9))
+    return defs, out
+
+
 THEMES = {
     "newyear": {"name": "Новогодняя", "title": "НАРЯДНЫЕ,КАК ЁЛКИ", "glow": "#3FA9FF", "scene": newyear},
     "gothic": {"name": "Готический бал", "title": "ТЬМА ВАМК ЛИЦУ", "glow": "#8A3DFF", "scene": gothic},
